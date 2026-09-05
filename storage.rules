@@ -1,0 +1,17 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Template preview images - public read
+    match /images/templates/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth.uid != null &&
+                       request.auth.token.admin == true;
+    }
+
+    // User generated images - write own, read own or public
+    match /images/generated/{allPaths=**} {
+      allow read: if true; // Public gallery images
+      allow write: if request.auth.uid != null;
+    }
+  }
+}

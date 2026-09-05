@@ -1,0 +1,9 @@
+// GET /api — health check (Phase 1.6)
+export async function GET() {
+  return Response.json({
+    status: "ok",
+    message: "Prompt Gallery API is running",
+    phase: "1",
+    timestamp: new Date().toISOString(),
+  });
+}

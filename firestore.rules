@@ -1,0 +1,36 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Templates - Read public, write by admin only
+    match /templates/{document=**} {
+      allow read: if true;
+      allow write: if request.auth.uid != null &&
+                       request.auth.token.admin == true;
+    }
+
+    // Users - Own data only (public profiles readable)
+    match /users/{userId} {
+      allow read: if request.auth.uid == userId || true; // Public profiles
+      allow write: if request.auth.uid == userId;
+    }
+
+    // User Versions - Own or public
+    match /user_versions/{document=**} {
+      allow read: if resource.data.is_public == true ||
+                      request.auth.uid == resource.data.user_id;
+      allow write: if request.auth.uid == resource.data.user_id;
+    }
+
+    // Chat Sessions - Own only
+    match /chat_sessions/{document=**} {
+      allow read, write: if request.auth.uid == resource.data.user_id;
+    }
+
+    // Generated Images - Own or public
+    match /generated_images/{document=**} {
+      allow read: if resource.data.is_public == true ||
+                      request.auth.uid == resource.data.user_id;
+      allow write: if request.auth.uid == resource.data.user_id;
+    }
+  }
+}
