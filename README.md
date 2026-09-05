@@ -1,94 +1,382 @@
-# 🏠 Prompt Gallery
+<div align="center">
 
-Text-to-image **prompt template gallery** with AI-powered refinement (Zhipu GLM-3). Browse prompt templates, chat with an AI assistant to refine them, then generate images with the model of your choice. See `PRD_Prompt_Gallery_App.md` for the full spec.
+# 🏙️ Prompt Gallery
 
-> **Phase 1 — Foundation** ✅ (this snapshot)
-> Running on **Next.js 16** (upgraded from the PRD's Next.js 14 to stay on a security-supported line — see commit history).
+**A prompt template gallery for text-to-image AI — browse templates, refine prompts with an AI sparring partner (Zhipu GLM-3), and generate images with the model of your choice.**
 
-## Tech Stack
+Next.js · TypeScript · Tailwind CSS · shadcn/ui · Firebase · 100% Free Stack
 
-| Layer     | Choice                                             |
-| --------- | -------------------------------------------------- |
-| Frontend  | Next.js 16 (App Router) · Tailwind CSS · shadcn/ui |
-| State     | @tanstack/react-query                              |
-| Database  | Firebase Firestore                                 |
-| Auth      | Firebase Auth (Google OAuth, planned)              |
-| LLM       | Zhipu GLM-3 (Phase 3)                              |
-| Image gen | Hugging Face / Replicate (Phase 4)                 |
+</div>
 
-## Getting Started
+---
 
-```bash
-npm install
-npm run dev
+## 📑 Table of Contents
+
+- [Overview](#-overview)
+- [Key Features](#-key-features)
+- [Tech Stack](#-tech-stack)
+- [Architecture](#-architecture)
+- [Project Structure](#-project-structure)
+- [Getting Started](#-getting-started)
+- [Environment Variables](#-environment-variables)
+- [API Reference](#-api-reference)
+- [Firebase Setup](#-firebase-setup)
+- [Database Schema](#-database-schema)
+- [Scripts](#-scripts)
+- [Roadmap](#-roadmap)
+- [Deployment](#-deployment)
+- [Versioning & Process Tracking](#-versioning--process-tracking)
+- [Glossary](#-glossary)
+- [Contact](#-contact)
+
+---
+
+## 📌 Overview
+
+**Prompt Gallery** is a free web platform that helps content creators, designers, and AI enthusiasts master **prompt engineering** for text-to-image generation. It provides:
+
+1. A browsable **repository of ready-to-use prompt templates** with preview images.
+2. An interactive **AI refinement chat** (Zhipu GLM-3) that improves prompts turn-by-turn while tracking each iteration.
+3. A **model selector** so the finished prompt can be sent to the user's preferred image generator (DALL·E, Flux, Stable Diffusion, and more).
+4. **Save & share** flows for refined "user versions" of any template.
+
+Full product specification: see `PRD_Prompt_Gallery_App.md` (referenced by section throughout this project, e.g. "PRD §4.1").
+
+### Design Goals
+
+| Goal | Description |
+| --- | --- |
+| 🎓 Education | Teach good prompt-writing through real, curated examples |
+| 🧩 Template Repository | Inspiring, ready-to-use prompts across categories |
+| 💬 Interactive Refinement | Real-time AI assistance improving prompt quality |
+| 🎛️ Multi-Model Support | Users pick the generator that fits their workflow |
+| 💸 Zero Cost | Free for both users and developers |
+
+---
+
+## ✨ Key Features
+
+| Feature | Status | Phase |
+| --- | --- | --- |
+| 🖼️ Gallery browse (search, category filter, sort, pagination) | Planned | 2 |
+| 📝 Template customize view + live prompt progression | Planned | 2–3 |
+| 💬 GLM-3 chat refinement with iteration history | Planned | 3 |
+| 🎨 Multi-model image generation (Hugging Face / Replicate) | Planned | 4 |
+| ⭐ Favorites, history, custom "My Versions" | Planned | 2–4 |
+| 🔗 Save / share / export custom prompts | Planned | 3–4 |
+| 🏗️ Foundation: design system, API skeleton, env, rules | **✅ Done** | 1 |
+
+> **You are here:** Phase 1 (Foundation) is complete. See the [Roadmap](#-roadmap).
+
+---
+
+## 🛠️ Tech Stack
+
+| Layer | Technology | Purpose |
+| --- | --- | --- |
+| **Frontend** | Next.js 16 (App Router) · React 19 | UI framework |
+| **Styling** | Tailwind CSS 3 · shadcn/ui (Radix primitives) | Design system, dark-first theme per PRD §9.1 |
+| **State** | @tanstack/react-query | Server-state & data fetching |
+| **Realtime** | socket.io-client | Live chat (Phase 3) |
+| **Backend** | Next.js Route Handlers (`/api/*`) | Serverless endpoints |
+| **Database** | Firebase Firestore | Templates, users, versions, sessions |
+| **Storage** | Firebase Storage | Generated + template images |
+| **Auth** | Firebase Auth / Google OAuth | Planned (Phase 2) |
+| **LLM** | Zhipu GLM-3 (`glm-3-5-turbo`) | Prompt refinement assistant (Phase 3) |
+| **Image Gen** | Hugging Face API + Replicate | Free-tier image generation (Phase 4) |
+| **Deployment** | Vercel (free tier) | Production hosting |
+
+### Version note
+
+The original spec targeted Next.js 14. This project was upgraded to **Next.js 16 (React 19, ESLint 9 flat config)** so it stays on a security-supported line — `npm audit` reports **0 vulnerabilities**. See commit `70fbb50` ("Phase 1: Project foundation setup") and its history for the migration details.
+
+---
+
+## 🏗️ Architecture
+
+```text
+┌────────────────────────── User Browser ──────────────────────────┐
+│  Gallery (browse) ──► Customize View ──► Chat with AI ──► Image  │
+└──────────────┬────────────────────────────────────────┬───────────┘
+               │ HTTP /api/*                            │
+┌──────────────▼────────────────────────────────────────▼───────────┐
+│                      Next.js 16 (Vercel)                          │
+│  Route Handlers:  /api · /api/auth · /api/templates ·             │
+│                   /api/chat · /api/generate · /api/user-versions  │
+└──────┬──────────────────┬──────────────────────┬──────────────────┘
+       │ Firebase SDK     │ GLM-3 API            │ HF / Replicate
+┌──────▼─────────┐ ┌──────▼───────────┐ ┌────────▼─────────────────┐
+│ Firestore +    │ │ Zhipu GLM-3      │ │ Hugging Face · Replicate │
+│ Storage + Auth │ │ (Phase 3)        │ │ (Phase 4)                │
+└────────────────┘ └──────────────────┘ └──────────────────────────┘
 ```
 
-Open [http://localhost:3000](http://localhost:3000). The health check endpoint lives at [http://localhost:3000/api](http://localhost:3000/api).
+---
 
-## Environment Variables
+## 📂 Project Structure
 
-Copy `.env.example` to `.env.local` and fill in real values:
+```text
+.
+├── app/                          # Next.js App Router
+│   ├── layout.tsx                # Root layout + metadata (dark theme)
+│   ├── page.tsx                  # Landing page
+│   ├── globals.css               # Tailwind + PRD color tokens
+│   └── api/                      # Route Handlers (serverless)
+│       ├── route.ts              # GET /api → health check (live ✅)
+│       ├── auth/                 # Auth endpoints (Phase 2+)
+│       ├── templates/            # Gallery CRUD (Phase 2)
+│       ├── chat/                 # GLM-3 refinement (Phase 3)
+│       ├── generate/             # Image generation (Phase 4)
+│       └── user-versions/        # Saved custom prompts (Phase 2/3)
+├── components/
+│   ├── ui/                       # shadcn/ui (button, card, dialog, …)
+│   ├── layouts/                  # Nav, footer, shells (Phase 2)
+│   ├── gallery/                  # Gallery cards & filters (Phase 2)
+│   └── customize/                # Customize + chat view (Phase 3)
+├── lib/
+│   ├── firebase.ts               # Firebase client (guarded init)
+│   ├── types/index.ts            # Domain types mirroring PRD §4
+│   ├── utils.ts                  # cn() classname helper
+│   ├── services/                 # Data services (Phase 2)
+│   └── types/                    # Domain types
+├── public/images/                # Local assets
+├── components.json               # shadcn/ui config
+├── next.config.ts                # Image domains (Firebase, HF, Replicate)
+├── tailwind.config.ts            # Theme + PRD palette
+├── eslint.config.mjs             # ESLint 9 flat config
+├── firestore.rules               # Firestore security rules
+├── storage.rules                 # Firebase Storage rules
+├── firebase.json                 # Firebase project config + emulators
+├── .env.local                    # Local secrets (git-ignored)
+└── .env.example                  # Env template (committed)
+```
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- **Node.js ≥ 20.9** (developed on Node 22)
+- npm (or pnpm / yarn / bun)
+- A GitHub account (for process tracking & deployments)
+
+### 1. Install
+
+```bash
+git clone https://github.com/Faber-Aritonang/Promt_Pic_Gallery.git
+cd Promt_Pic_Gallery
+npm install
+```
+
+### 2. Environment
 
 ```bash
 cp .env.example .env.local
+# then fill in real values — see "Environment Variables" below
 ```
 
-Placeholders keep the app running before Firebase/GLM keys exist — `lib/firebase.ts` skips initialization until real credentials are present.
-
-| Variable                     | Where to get it                                                        |
-| ---------------------------- | ---------------------------------------------------------------------- |
-| `NEXT_PUBLIC_FIREBASE_*`     | [Firebase console](https://console.firebase.google.com) → web app      |
-| `GLM_API_KEY`                | [Zhipu open.bigmodel.cn](https://open.bigmodel.cn/) (Phase 3)          |
-| `HUGGING_FACE_API_KEY`       | [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens) (Phase 4) |
-| `REPLICATE_API_TOKEN`        | [replicate.com/account](https://replicate.com/account) (Phase 4)       |
-
-## Project Structure
-
-```
-app/
-├── layout.tsx / page.tsx / globals.css
-└── api/                  # Next.js API routes
-    ├── route.ts          # GET /api — health check
-    ├── auth/             # Phase 2+: Firebase Auth
-    ├── templates/        # Phase 2: gallery CRUD
-    ├── chat/             # Phase 3: GLM-3 refinement
-    ├── generate/         # Phase 4: image generation
-    └── user-versions/    # Phase 2/3: saved custom prompts
-components/
-├── ui/                   # shadcn/ui components
-├── layouts/ gallery/ customize/   # Phase 2/3 feature components
-lib/
-├── firebase.ts           # Firebase client (guarded init)
-├── types/index.ts        # PRD domain types
-└── utils.ts              # cn() helper
-firestore.rules           # Firestore security rules (deploy when DB exists)
-storage.rules             # Firebase Storage rules
-```
-
-## Scripts
+### 3. Run locally
 
 ```bash
-npm run dev        # start dev server
-npm run build      # production build
-npm run lint       # eslint (flat config)
-npm run typecheck  # tsc --noEmit
+npm run dev
 ```
 
-## Firestore Security Rules
+Open [http://localhost:3000](http://localhost:3000).
 
-When the Firestore project exists, deploy the rules (Phase 1.7):
+> ⚠️ If port 3000 is already in use (e.g. another service on your machine),
+> start on a free port instead:
+>
+> ```bash
+> npm run dev -- -p 3001
+> ```
+
+The health check responds at [http://localhost:3000/api](http://localhost:3000/api):
+
+```json
+{ "status": "ok", "message": "Prompt Gallery API is running", "phase": "1", "timestamp": "…" }
+```
+
+### 4. Verify
+
+```bash
+npm run lint        # ESLint (flat config)
+npm run typecheck   # TypeScript (tsc --noEmit)
+npm run build       # Production build
+```
+
+---
+
+## 🔑 Environment Variables
+
+Copy `.env.example` → `.env.local`. All variables are required before enabling the related feature; placeholder values keep the app running in the meantime (`lib/firebase.ts` skips initialization until real credentials are present).
+
+| Variable | Needed for | Where to get it |
+| --- | --- | --- |
+| `NEXT_PUBLIC_FIREBASE_API_KEY` | Firebase (client) | Firebase console → Web app |
+| `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` | Firebase (client) | Firebase console → Web app |
+| `NEXT_PUBLIC_FIREBASE_PROJECT_ID` | Firebase (client) | Firebase console → Web app |
+| `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET` | Firebase (client) | Firebase console → Web app |
+| `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID` | Firebase (client) | Firebase console → Web app |
+| `NEXT_PUBLIC_FIREBASE_APP_ID` | Firebase (client) | Firebase console → Web app |
+| `NEXT_PUBLIC_API_URL` | Client API calls | Default `http://localhost:3000/api` |
+| `NEXT_PUBLIC_SITE_URL` | Absolute URLs / OG | Default `http://localhost:3000` |
+| `GLM_API_KEY` | GLM-3 chat (Phase 3) | [open.bigmodel.cn](https://open.bigmodel.cn/) |
+| `GLM_API_ENDPOINT` | GLM-3 chat (Phase 3) | Default endpoint in `.env.example` |
+| `HUGGING_FACE_API_KEY` | Image gen (Phase 4) | [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens) |
+| `REPLICATE_API_TOKEN` | Image gen (Phase 4) | [replicate.com/account](https://replicate.com/account) |
+| `ENVIRONMENT` | Runtime mode | `development` / `production` |
+
+> 🔒 `.env*.local` is git-ignored — never commit real keys. `.env.example` holds placeholders only.
+
+---
+
+## 🔌 API Reference
+
+Base URL: `/api` (local: `http://localhost:3000/api`). All responses follow the `ApiResponse<T>` envelope (`lib/types/index.ts`):
+
+```json
+{ "success": true, "data": { }, "message": "optional" }
+```
+
+| Method | Endpoint | Description | Status |
+| --- | --- | --- | --- |
+| GET | `/api` | Health check / uptime probe | ✅ Live |
+| POST | `/api/auth` | Auth actions (login / logout / register / me) | 🚧 Phase 2 |
+| GET | `/api/templates` | List templates (+ `?category=` / `?q=` filters) | 🚧 Phase 2 |
+| GET | `/api/templates/:id` | Single template | 🚧 Phase 2 |
+| POST | `/api/user-versions` | Create a saved custom prompt | 🚧 Phase 2/3 |
+| GET | `/api/user-versions` | List the caller's versions | 🚧 Phase 2/3 |
+| POST | `/api/chat` | Send message → GLM-3 refinement | 🚧 Phase 3 |
+| POST | `/api/generate` | Generate image with selected model | 🚧 Phase 4 |
+| GET | `/api/models` | List supported image models | 🚧 Phase 4 |
+
+Endpoint stubs return `501` with `{ "success": false, "error": "Not implemented yet" }` until their phase lands.
+
+---
+
+## 🔥 Firebase Setup
+
+The Firebase layer (client SDK, security rules, storage rules) is **already wired into the repo** — it only needs a real project to point at.
+
+### 1. Create the project
+
+1. Go to the [Firebase console](https://console.firebase.google.com) → **Add project**.
+2. Add a **Web app** and copy the six `NEXT_PUBLIC_FIREBASE_*` values into `.env.local`.
+3. Enable **Firestore Database**, **Storage**, and **Authentication** (Google sign-in).
+
+### 2. Deploy security rules (PRD §1.7 / §11)
 
 ```bash
 npx firebase-tools login
-npx firebase-tools deploy --only firestore:rules
+npx firebase-tools deploy --only firestore:rules,storage
 ```
 
-## Phase Status
+The rules enforce:
 
-| Phase | Scope                              | Status    |
-| ----- | ---------------------------------- | --------- |
-| 1     | Foundation & Setup                 | ✅ Done   |
-| 2     | Gallery & Database                 | ⏳ Next   |
-| 3     | AI Chat Integration (GLM-3)        | Planned   |
-| 4     | Image Generation Backend           | Planned   |
-| 5     | Testing & Deployment               | Planned   |
+- `templates/` → public read, admin-only write.
+- `users/` → profile readable, writes restricted to the owner (`request.auth.uid == userId`).
+- `user_versions/` → owner write; public versions readable by everyone.
+- `chat_sessions/` → owner only.
+- `generated_images/` → owner write; public images readable by everyone.
+
+### 3. Local emulators (optional)
+
+`firebase.json` already defines Auth/Firestore/Storage emulator ports:
+
+```bash
+npx firebase-tools emulators:start
+```
+
+---
+
+## 🗄️ Database Schema
+
+Domain types in `lib/types/index.ts` mirror the PRD collections (PRD §4):
+
+| Collection | Document | Notes |
+| --- | --- | --- |
+| `templates` | `Template` | Prompt + preview image, category/tags, stats (views, favorites, rating) |
+| `user_versions` | `UserVersion` | A user's refined copy with `refinement_steps[]` history |
+| `chat_sessions` | `ChatSession` | Message log per template session |
+| `generated_images` | `GeneratedImage` | Model used, params, output URL, timing, usage |
+| `users` | `User` | Profile + aggregate stats |
+
+Timestamps are stored as epoch **milliseconds** (`number`) for easy ordering and serialization.
+
+---
+
+## 📜 Scripts
+
+| Script | Command | Description |
+| --- | --- | --- |
+| `dev` | `npm run dev` | Start dev server |
+| `build` | `npm run build` | Production build |
+| `start` | `npm run start` | Serve production build |
+| `lint` | `npm run lint` | ESLint (flat config) |
+| `typecheck` | `npm run typecheck` | TypeScript check without emitting |
+
+---
+
+## 🗺️ Roadmap
+
+Development is executed in **phases** so progress can be reviewed and resumed easily (see the master build prompt / PRD). Each phase ends with a tagged, documented commit.
+
+| Phase | Scope | Status |
+| --- | --- | --- |
+| **1** | Foundation & setup — scaffold, design system, Firebase wiring, env, API skeleton, rules | ✅ **Done** (commit `70fbb50`) |
+| **2** | Gallery & database — template schema + seeds, browse UI, search/filter, template endpoints | ⏳ Next |
+| **3** | AI chat — GLM-3 integration, chat UI, session management, prompt progression | Planned |
+| **4** | Image generation — Hugging Face / Replicate, model selector, results & storage | Planned |
+| **5** | Testing & deployment — unit/integration tests, perf, security audit, launch | Planned |
+
+> Process history lives in the git log — every phase, decision (e.g. the Next.js 16 upgrade) and follow-up is committed for traceability.
+
+---
+
+## 🌐 Deployment
+
+### Recommended: Vercel (free)
+
+1. Push this repository to GitHub.
+2. In [vercel.com](https://vercel.com) → **Import Project** → pick this repo.
+3. Add all variables from `.env.example` to the project's Environment Variables.
+4. Deploy — Vercel auto-builds and serves `GET /api` at `https://<app>.vercel.app/api`.
+
+### Hosting on GitHub
+
+This repository **is** the GitHub home of the project (source control + issue tracking + CI-ready). The application itself requires a Node.js server (Next.js Route Handlers, Firebase, external APIs), so it cannot fully run on static-only GitHub Pages — for the working app, deploy to any free Node-capable host (Vercel / Netlify / Render free tiers). A static GitHub Pages preview of the landing page can be added later if desired.
+
+---
+
+## 🔖 Versioning & Process Tracking
+
+- **Versioning:** semantic-style bumps per phase (`v0.1.0` → `v1.0.0` at launch).
+- **Tracking:** every step is committed with a descriptive message and this footer, so the full process is reproducible:
+  ```text
+  🤖 Generated with Codebuff
+  Co-Authored-By: Codebuff <noreply@codebuff.com>
+  ```
+
+---
+
+## 📖 Glossary
+
+| Term | Meaning |
+| --- | --- |
+| Template | Pre-made prompt with a generated preview image |
+| Prompt | Text instruction for an AI image generator |
+| Refinement | Iteratively improving a prompt with AI help |
+| User Version | A user's saved, refined copy of a template |
+| Turn | One user↔AI exchange in the chat |
+| Model | An image-generation service (DALL·E, Flux, SD, …) |
+
+---
+
+## 📬 Contact
+
+Maintained by **Faber Aritonang** — issues & feature requests via the [GitHub Issues](https://github.com/Faber-Aritonang/Promt_Pic_Gallery/issues) tab of this repository.
+
+---
+
+<div align="center"><sub>Prompt Gallery · Phase 1 Foundation · Built with the 100% free stack</sub></div>
