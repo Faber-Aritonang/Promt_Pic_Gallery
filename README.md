@@ -88,7 +88,7 @@ Full product specification: see `PRD_Prompt_Gallery_App.md` (referenced by secti
 
 ### Version note
 
-The original spec targeted Next.js 14. This project was upgraded to **Next.js 16 (React 19, ESLint 9 flat config)** so it stays on a security-supported line — `npm audit` reports **0 vulnerabilities**. See commit `70fbb50` ("Phase 1: Project foundation setup") and its history for the migration details.
+The original spec targeted Next.js 14. This project was upgraded to **Next.js 16 (React 19, ESLint 9 flat config)** so it stays on a security-supported line — the production dependency tree reports **0 vulnerabilities** (`npm audit --omit=dev`). See commit `70fbb50` ("Phase 1: Project foundation setup") and its history for the migration details.
 
 ---
 
@@ -336,16 +336,38 @@ Development is executed in **phases** so progress can be reviewed and resumed ea
 
 ## 🌐 Deployment
 
-### Recommended: Vercel (free)
+The project ships with a **GitHub Actions workflow** (`.github/workflows/deploy.yml`) that auto-deploys the `main` branch to **Vercel (free tier)** — every push runs `lint` + `typecheck`, then builds and publishes to production. Vercel is the intended host (PRD §7.1 / §12) because it runs Next.js serverless Route Handlers (`/api/*`) natively.
 
-1. Push this repository to GitHub.
-2. In [vercel.com](https://vercel.com) → **Import Project** → pick this repo.
-3. Add all variables from `.env.example` to the project's Environment Variables.
-4. Deploy — Vercel auto-builds and serves `GET /api` at `https://<app>.vercel.app/api`.
+### Why not GitHub Pages?
 
-### Hosting on GitHub
+This repository is the GitHub home of the project (source control, issue tracking, CI). But the app needs a Node.js server — Next.js Route Handlers, Firebase, and external LLM/image APIs cannot run on static-only GitHub Pages. A static GitHub Pages preview of the landing page could be added later, but the **working app deploys to a free Node-capable host**, i.e. Vercel.
 
-This repository **is** the GitHub home of the project (source control + issue tracking + CI-ready). The application itself requires a Node.js server (Next.js Route Handlers, Firebase, external APIs), so it cannot fully run on static-only GitHub Pages — for the working app, deploy to any free Node-capable host (Vercel / Netlify / Render free tiers). A static GitHub Pages preview of the landing page can be added later if desired.
+### Activate auto-deploy (one-time setup)
+
+1. **Create the Vercel project** — sign up at [vercel.com](https://vercel.com) and **Import Project** → this GitHub repository (or run `npx vercel link` inside the repo after logging in with `npx vercel login`).
+2. **Create an API token** — [vercel.com/account/tokens](https://vercel.com/account/tokens) → *Create Token* (e.g. `prompt-gallery-ci`).
+3. **Add GitHub secrets** — in this repo → *Settings → Secrets and variables → Actions*, create:
+
+   | Secret | Value |
+   | --- | --- |
+   | `VERCEL_TOKEN` | The API token from step 2 |
+   | `VERCEL_ORG_ID` | Your Vercel team/user ID (see `.vercel/project.json` after `vercel link`) |
+   | `VERCEL_PROJECT_ID` | The project ID (see `.vercel/project.json`) |
+
+4. **Add environment variables** in the Vercel project (*Settings → Environment Variables*) — copy every key from `.env.example`. ⚠️ Production secrets live in Vercel, **not** in the repository.
+5. **Push to `main`** — the workflow runs automatically; the production URL appears in the run log and on the Vercel dashboard.
+6. **Verify** — open `https://<your-app>.vercel.app/api`; it should return the health JSON (`{"status":"ok",…}`).
+
+You can also trigger a deploy manually from the *Actions* tab (**Run workflow**). The `vercel` CLI is pinned as a devDependency for reproducible builds.
+
+### Local link workflow (alternative to dashboard import)
+
+```bash
+npx vercel login          # once
+npx vercel link           # once — creates .vercel/project.json (git-ignored)
+cp .env.example .env.local
+npx vercel dev            # local dev with env from Vercel
+```
 
 ---
 
