@@ -29,7 +29,7 @@ export default function Home() {
           Foundation ready
         </Badge>
         <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
-          Prompt Gallery
+          PromtPicGallery
         </h1>
         <p className="text-muted-foreground">
           Text-to-image prompt template gallery with AI-powered refinement.

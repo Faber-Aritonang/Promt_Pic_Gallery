@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🏙️ Prompt Gallery
+# 🏙️ PromtPicGallery
 
 **A prompt template gallery for text-to-image AI — browse templates, refine prompts with an AI sparring partner (Zhipu GLM-3), and generate images with the model of your choice.**
 
@@ -33,7 +33,7 @@ Next.js · TypeScript · Tailwind CSS · shadcn/ui · Firebase · 100% Free Stac
 
 ## 📌 Overview
 
-**Prompt Gallery** is a free web platform that helps content creators, designers, and AI enthusiasts master **prompt engineering** for text-to-image generation. It provides:
+**PromtPicGallery** is a free web platform that helps content creators, designers, and AI enthusiasts master **prompt engineering** for text-to-image generation. It provides:
 
 1. A browsable **repository of ready-to-use prompt templates** with preview images.
 2. An interactive **AI refinement chat** (Zhipu GLM-3) that improves prompts turn-by-turn while tracking each iteration.
@@ -194,7 +194,7 @@ Open [http://localhost:3000](http://localhost:3000).
 The health check responds at [http://localhost:3000/api](http://localhost:3000/api):
 
 ```json
-{ "status": "ok", "message": "Prompt Gallery API is running", "phase": "1", "timestamp": "…" }
+{ "status": "ok", "message": "PromtPicGallery API is running", "phase": "1", "timestamp": "…" }
 ```
 
 ### 4. Verify
@@ -345,7 +345,7 @@ This repository is the GitHub home of the project (source control, issue trackin
 ### Activate auto-deploy (one-time setup)
 
 1. **Create the Vercel project** — sign up at [vercel.com](https://vercel.com) and **Import Project** → this GitHub repository (or run `npx vercel link` inside the repo after logging in with `npx vercel login`).
-2. **Create an API token** — [vercel.com/account/tokens](https://vercel.com/account/tokens) → *Create Token* (e.g. `prompt-gallery-ci`).
+2. **Create an API token** — [vercel.com/account/tokens](https://vercel.com/account/tokens) → *Create Token* (e.g. `promtpicgallery-ci`).
 3. **Add GitHub secrets** — in this repo → *Settings → Secrets and variables → Actions*, create:
 
    | Secret | Value |
@@ -401,4 +401,4 @@ Maintained by **Faber Aritonang** — issues & feature requests via the [GitHub 
 
 ---
 
-<div align="center"><sub>Prompt Gallery · Phase 1 Foundation · Built with the 100% free stack</sub></div>
+<div align="center"><sub>PromtPicGallery · Phase 1 Foundation · Built with the 100% free stack</sub></div>

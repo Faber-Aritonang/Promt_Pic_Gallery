@@ -2,7 +2,7 @@
 export async function GET() {
   return Response.json({
     status: "ok",
-    message: "Prompt Gallery API is running",
+    message: "PromtPicGallery API is running",
     phase: "1",
     timestamp: new Date().toISOString(),
   });
