@@ -19,6 +19,8 @@ export interface TemplateListParams {
   page?: number;
   /** Items per page */
   limit?: number;
+  /** Offset for infinite scroll (alternative to page) */
+  offset?: number;
 }
 
 export interface TemplateListResult {
@@ -27,6 +29,10 @@ export interface TemplateListResult {
   page: number;
   limit: number;
   totalPages: number;
+  /** Whether there are more items to load */
+  hasMore: boolean;
+  /** Next offset for infinite scroll (-1 if no more) */
+  nextOffset: number;
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -77,17 +83,35 @@ function filterAndSort(
   }
 
   const total = result.length;
-  const page = Math.max(1, params.page ?? 1);
   const limit = Math.min(50, Math.max(1, params.limit ?? 12));
+
+  // Support both page-based and offset-based pagination
+  let start: number;
+  let page: number;
+
+  if (params.offset !== undefined && params.offset >= 0) {
+    // Infinite scroll mode: use offset directly
+    start = Math.min(params.offset, total);
+    page = Math.floor(start / limit) + 1;
+  } else {
+    // Traditional page-based mode
+    page = Math.max(1, params.page ?? 1);
+    start = (page - 1) * limit;
+  }
+
+  const paginated = result.slice(start, start + limit);
+  const hasMore = start + limit < total;
+  const nextOffset = hasMore ? start + limit : -1;
   const totalPages = Math.ceil(total / limit);
-  const start = (page - 1) * limit;
 
   return {
-    templates: result.slice(start, start + limit),
+    templates: paginated,
     total,
     page,
     limit,
     totalPages,
+    hasMore,
+    nextOffset,
   };
 }
 

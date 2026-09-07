@@ -45,8 +45,9 @@ export function GalleryFilters({
       } else {
         params.delete(key);
       }
-      // Reset to page 1 when filters change
+      // Reset pagination when filters change
       params.delete("page");
+      params.delete("offset");
       startTransition(() => {
         router.push(`/gallery?${params.toString()}`);
       });

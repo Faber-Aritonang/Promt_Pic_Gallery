@@ -1,11 +1,10 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { ShellLayout } from "@/components/layouts/ShellLayout";
 import { GalleryFilters } from "@/components/gallery/GalleryFilters";
 import { GalleryGrid } from "@/components/gallery/GalleryGrid";
-import { GalleryPagination } from "@/components/gallery/GalleryPagination";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Template } from "@/lib/types";
 
@@ -15,6 +14,8 @@ interface TemplateListResult {
   page: number;
   limit: number;
   totalPages: number;
+  hasMore: boolean;
+  nextOffset: number;
 }
 
 interface Category {
@@ -22,6 +23,8 @@ interface Category {
   label: string;
   count: number;
 }
+
+const ITEMS_PER_PAGE = 8;
 
 function GallerySkeleton() {
   return (
@@ -42,48 +45,140 @@ function GallerySkeleton() {
 
 function GalleryContent() {
   const searchParams = useSearchParams();
-  const [data, setData] = useState<TemplateListResult | null>(null);
+  const [templates, setTemplates] = useState<Template[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [nextOffset, setNextOffset] = useState(0);
+  const [total, setTotal] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+
+  const observerRef = useRef<IntersectionObserver | null>(null);
+  const loadMoreRef = useRef<HTMLDivElement>(null);
+  const fetchedRef = useRef(false);
 
   const q = searchParams.get("q") ?? "";
   const category = searchParams.get("category") ?? "";
   const sort = searchParams.get("sort") ?? "popular";
-  const page = searchParams.get("page") ?? "1";
 
+  // Build fetch URL from current filters
+  const buildFetchUrl = useCallback(
+    (offset: number) => {
+      const params = new URLSearchParams();
+      if (q) params.set("q", q);
+      if (category) params.set("category", category);
+      if (sort) params.set("sort", sort);
+      params.set("limit", String(ITEMS_PER_PAGE));
+      params.set("offset", String(offset));
+      return `/api/templates?${params.toString()}`;
+    },
+    [q, category, sort]
+  );
+
+  // Fetch first page when filters change
+  const prevFiltersRef = useRef(`${q}|${category}|${sort}`);
   useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        const params = new URLSearchParams();
-        if (q) params.set("q", q);
-        if (category) params.set("category", category);
-        if (sort) params.set("sort", sort);
-        if (page) params.set("page", page);
+    const currentFilters = `${q}|${category}|${sort}`;
+    if (prevFiltersRef.current === currentFilters && fetchedRef.current) {
+      return;
+    }
+    prevFiltersRef.current = currentFilters;
+    fetchedRef.current = true;
 
+    let cancelled = false;
+
+    async function load() {
+      setLoading(true);
+      setError(null);
+
+      try {
         const [templatesRes, categoriesRes] = await Promise.all([
-          fetch(`/api/templates?${params.toString()}`),
+          fetch(buildFetchUrl(0)),
           fetch("/api/templates?categories=true"),
         ]);
+
+        if (cancelled) return;
 
         const templatesJson = await templatesRes.json();
         const categoriesJson = await categoriesRes.json();
 
+        if (cancelled) return;
+
         if (templatesJson.success) {
-          setData(templatesJson.data);
+          const data: TemplateListResult = templatesJson.data;
+          setTemplates(data.templates);
+          setTotal(data.total);
+          setHasMore(data.hasMore);
+          setNextOffset(data.nextOffset);
         }
         if (categoriesJson.success) {
           setCategories(categoriesJson.data);
         }
-      } catch (error) {
-        console.error("Failed to fetch templates:", error);
+      } catch (err) {
+        if (!cancelled) {
+          console.error("Failed to fetch templates:", err);
+          setError("Failed to load templates. Please try again.");
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
-    };
+    }
 
-    fetchData();
-  }, [q, category, sort, page]);
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [q, category, sort, buildFetchUrl]);
+
+  // Fetch next page (append)
+  const fetchNextPage = useCallback(async () => {
+    if (loadingMore || !hasMore || nextOffset < 0) return;
+
+    setLoadingMore(true);
+
+    try {
+      const res = await fetch(buildFetchUrl(nextOffset));
+      const json = await res.json();
+
+      if (json.success) {
+        const data: TemplateListResult = json.data;
+        setTemplates((prev) => [...prev, ...data.templates]);
+        setHasMore(data.hasMore);
+        setNextOffset(data.nextOffset);
+      }
+    } catch (err) {
+      console.error("Failed to load more templates:", err);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [loadingMore, hasMore, nextOffset, buildFetchUrl]);
+
+  // Intersection Observer for infinite scroll
+  useEffect(() => {
+    if (observerRef.current) {
+      observerRef.current.disconnect();
+    }
+
+    observerRef.current = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !loading && !loadingMore) {
+          fetchNextPage();
+        }
+      },
+      { threshold: 0.1, rootMargin: "200px" }
+    );
+
+    if (loadMoreRef.current) {
+      observerRef.current.observe(loadMoreRef.current);
+    }
+
+    return () => {
+      observerRef.current?.disconnect();
+    };
+  }, [hasMore, loading, loadingMore, fetchNextPage]);
 
   return (
     <ShellLayout>
@@ -107,31 +202,47 @@ function GalleryContent() {
         </div>
 
         {/* Results count */}
-        {data && (
+        {!loading && (
           <p className="mb-4 text-sm text-muted-foreground">
-            {data.total} template{data.total !== 1 ? "s" : ""} found
+            {total} template{total !== 1 ? "s" : ""} found
           </p>
         )}
 
         {/* Grid */}
         {loading ? (
           <GallerySkeleton />
-        ) : data ? (
-          <GalleryGrid templates={data.templates} />
-        ) : (
-          <p className="text-center text-muted-foreground">
-            Failed to load templates. Please try again.
-          </p>
-        )}
-
-        {/* Pagination */}
-        {data && data.totalPages > 1 && (
-          <div className="mt-8">
-            <GalleryPagination
-              currentPage={data.page}
-              totalPages={data.totalPages}
-            />
+        ) : error ? (
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <p className="text-lg font-medium text-destructive">{error}</p>
+            <button
+              onClick={() => {
+                fetchedRef.current = false;
+                prevFiltersRef.current = "";
+                setLoading(true);
+              }}
+              className="mt-2 text-sm text-primary hover:underline"
+            >
+              Try again
+            </button>
           </div>
+        ) : (
+          <>
+            <GalleryGrid
+              templates={templates}
+              isLoading={loadingMore}
+              skeletonCount={4}
+            />
+
+            {/* Infinite scroll trigger */}
+            <div ref={loadMoreRef} className="h-4" aria-hidden="true" />
+
+            {/* End of results indicator */}
+            {!hasMore && templates.length > 0 && (
+              <p className="mt-8 text-center text-sm text-muted-foreground">
+                You&apos;ve reached the end of the gallery
+              </p>
+            )}
+          </>
         )}
       </div>
     </ShellLayout>
