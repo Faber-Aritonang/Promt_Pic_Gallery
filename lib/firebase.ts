@@ -5,7 +5,6 @@
 import { initializeApp, getApps } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
-import { getStorage } from "firebase/storage";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -29,6 +28,7 @@ const app =
 
 export const db = app ? getFirestore(app) : null;
 export const auth = app ? getAuth(app) : null;
-export const storage = app ? getStorage(app) : null;
+// Storage: use Cloudinary (lib/cloudinary.ts) instead of Firebase Storage.
+// This keeps Firebase free on Spark plan.
 
 export { app };

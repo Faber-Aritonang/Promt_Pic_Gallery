@@ -80,7 +80,7 @@ Full product specification: see `PRD_Prompt_Gallery_App.md` (referenced by secti
 | **Realtime** | socket.io-client | Live chat (Phase 3) |
 | **Backend** | Next.js Route Handlers (`/api/*`) | Serverless endpoints |
 | **Database** | Firebase Firestore | Templates, users, versions, sessions |
-| **Storage** | Firebase Storage | Generated + template images |
+| **Storage** | Cloudinary (25 GB free) | Generated + template images |
 | **Auth** | Firebase Auth / Google OAuth | Planned (Phase 2) |
 | **LLM** | Zhipu GLM-3 (`glm-3-5-turbo`) | Prompt refinement assistant (Phase 3) |
 | **Image Gen** | Hugging Face API + Replicate | Free-tier image generation (Phase 4) |
@@ -134,7 +134,9 @@ The original spec targeted Next.js 14. This project was upgraded to **Next.js 16
 │   ├── gallery/                  # Gallery cards & filters (Phase 2)
 │   └── customize/                # Customize + chat view (Phase 3)
 ├── lib/
-│   ├── firebase.ts               # Firebase client (guarded init)
+│   ├── firebase.ts               # Firebase client (guarded init, browser)
+│   ├── firebase-admin.ts         # Firebase Admin SDK (guarded init, server)
+│   ├── cloudinary.ts             # Cloudinary image upload & management
 │   ├── types/index.ts            # Domain types mirroring PRD §4
 │   ├── utils.ts                  # cn() classname helper
 │   ├── services/                 # Data services (Phase 2)
@@ -145,7 +147,7 @@ The original spec targeted Next.js 14. This project was upgraded to **Next.js 16
 ├── tailwind.config.ts            # Theme + PRD palette
 ├── eslint.config.mjs             # ESLint 9 flat config
 ├── firestore.rules               # Firestore security rules
-├── storage.rules                 # Firebase Storage rules
+├── storage.rules                 # Firebase Storage rules (deprecated, using Cloudinary)
 ├── firebase.json                 # Firebase project config + emulators
 ├── .env.local                    # Local secrets (git-ignored)
 └── .env.example                  # Env template (committed)
@@ -219,6 +221,9 @@ Copy `.env.example` → `.env.local`. All variables are required before enabling
 | `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET` | Firebase (client) | Firebase console → Web app |
 | `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID` | Firebase (client) | Firebase console → Web app |
 | `NEXT_PUBLIC_FIREBASE_APP_ID` | Firebase (client) | Firebase console → Web app |
+| `FIREBASE_SERVICE_ACCOUNT` | Firebase Admin (server) | Firebase console → Service accounts → Generate new private key |
+| `CLOUDINARY_CLOUD_NAME` | Cloudinary (image storage) | Cloudinary dashboard → Copy cloud name |
+| `CLOUDINARY_UPLOAD_PRESET` | Cloudinary (image storage) | Cloudinary Settings → Upload → Add upload preset |
 | `NEXT_PUBLIC_API_URL` | Client API calls | Default `http://localhost:3000/api` |
 | `NEXT_PUBLIC_SITE_URL` | Absolute URLs / OG | Default `http://localhost:3000` |
 | `GLM_API_KEY` | GLM-3 chat (Phase 3) | [open.bigmodel.cn](https://open.bigmodel.cn/) |
@@ -257,19 +262,20 @@ Endpoint stubs return `501` with `{ "success": false, "error": "Not implemented 
 
 ## 🔥 Firebase Setup
 
-The Firebase layer (client SDK, security rules, storage rules) is **already wired into the repo** — it only needs a real project to point at.
+The Firebase layer (client SDK, security rules) is **already wired into the repo** — it only needs a real project to point at.
 
 ### 1. Create the project
 
 1. Go to the [Firebase console](https://console.firebase.google.com) → **Add project**.
 2. Add a **Web app** and copy the six `NEXT_PUBLIC_FIREBASE_*` values into `.env.local`.
 3. Enable **Firestore Database**, **Storage**, and **Authentication** (Google sign-in).
+4. For server-side Admin SDK (Phase 2+): go to **Project settings → Service accounts** → *Generate new private key* → paste the JSON content as the `FIREBASE_SERVICE_ACCOUNT` value in `.env.local` (single line). On Vercel/GCP this step is optional — Application Default Credentials are used automatically.
 
 ### 2. Deploy security rules (PRD §1.7 / §11)
 
 ```bash
 npx firebase-tools login
-npx firebase-tools deploy --only firestore:rules,storage
+npx firebase-tools deploy --only firestore:rules
 ```
 
 The rules enforce:
@@ -282,7 +288,7 @@ The rules enforce:
 
 ### 3. Local emulators (optional)
 
-`firebase.json` already defines Auth/Firestore/Storage emulator ports:
+`firebase.json` already defines Auth/Firestore emulator ports:
 
 ```bash
 npx firebase-tools emulators:start

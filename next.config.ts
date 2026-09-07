@@ -3,8 +3,10 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
-      // Firebase Storage (PRD Section 5.3)
-      { protocol: "https", hostname: "firebasestorage.googleapis.com" },
+      // Cloudinary (PRD Section 5.3 — image storage)
+      { protocol: "https", hostname: "res.cloudinary.com" },
+      // Unsplash (seed data preview images)
+      { protocol: "https", hostname: "images.unsplash.com" },
       // Hugging Face inference + Spaces
       { protocol: "https", hostname: "huggingface.co" },
       { protocol: "https", hostname: "*.hf.space" },

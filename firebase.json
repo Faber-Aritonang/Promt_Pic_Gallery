@@ -4,7 +4,8 @@
     "indexes": "firestore.indexes.json"
   },
   "storage": {
-    "rules": "storage.rules"
+    "rules": "storage.rules",
+    "_note": "Deprecated — using Cloudinary for image storage"
   },
   "hosting": {
     "public": "out",
