@@ -2,7 +2,7 @@
 
 # 🏙️ PromtPicGallery
 
-**A prompt template gallery for text-to-image AI — browse templates, refine prompts with an AI sparring partner (Zhipu GLM-3), and generate images with the model of your choice.**
+**A prompt template gallery for text-to-image AI — browse templates, refine prompts with an AI sparring partner (Zhipu GLM), and generate images with the model of your choice.**
 
 Next.js · TypeScript · Tailwind CSS · shadcn/ui · Firebase · 100% Free Stack
 
@@ -36,9 +36,9 @@ Next.js · TypeScript · Tailwind CSS · shadcn/ui · Firebase · 100% Free Stac
 **PromtPicGallery** is a free web platform that helps content creators, designers, and AI enthusiasts master **prompt engineering** for text-to-image generation. It provides:
 
 1. A browsable **repository of ready-to-use prompt templates** with preview images.
-2. An interactive **AI refinement chat** (Zhipu GLM-3) that improves prompts turn-by-turn while tracking each iteration.
-3. A **model selector** so the finished prompt can be sent to the user's preferred image generator (DALL·E, Flux, Stable Diffusion, and more).
-4. **Save & share** flows for refined "user versions" of any template.
+2. An interactive **AI refinement chat** (Zhipu GLM, `glm-4.5-flash`) that improves prompts turn-by-turn with live streaming responses and a prompt-progression tracker.
+3. A **model selector** (planned) so the finished prompt can be sent to the user's preferred image generator (DALL·E, Flux, Stable Diffusion, and more).
+4. **Save & share** flows (planned) for refined "user versions" of any template.
 
 Full product specification: see `PRD_Prompt_Gallery_App.md` (referenced by section throughout this project, e.g. "PRD §4.1").
 
@@ -58,15 +58,16 @@ Full product specification: see `PRD_Prompt_Gallery_App.md` (referenced by secti
 
 | Feature | Status | Phase |
 | --- | --- | --- |
-| 🖼️ Gallery browse (search, category filter, sort, pagination) | Planned | 2 |
-| 📝 Template customize view + live prompt progression | Planned | 2–3 |
-| 💬 GLM-3 chat refinement with iteration history | Planned | 3 |
-| 🎨 Multi-model image generation (Hugging Face / Replicate) | Planned | 4 |
+| 🖼️ Gallery browse (search, category filter, sort, infinite scroll) | **✅ Done** | 2 |
+| 🏗️ Template detail view (prompt, style tips, variations, copy) | **✅ Done** | 2 |
+| 💬 GLM chat refinement with live streaming + prompt progression | **✅ Done** | 3 |
+| 📝 Template seed data (20 templates across categories) | **✅ Done** | 2 |
+| 🔐 Auth (Firebase Auth / Google OAuth) | Planned | 2+ |
 | ⭐ Favorites, history, custom "My Versions" | Planned | 2–4 |
 | 🔗 Save / share / export custom prompts | Planned | 3–4 |
-| 🏗️ Foundation: design system, API skeleton, env, rules | **✅ Done** | 1 |
+| 🎨 Multi-model image generation (Hugging Face / Replicate) | Planned | 4 |
 
-> **You are here:** Phase 1 (Foundation) is complete. See the [Roadmap](#-roadmap).
+> **You are here:** Phases 1–3 are complete. Phase 4 (image generation) is next. See the [Roadmap](#-roadmap).
 
 ---
 
@@ -76,14 +77,14 @@ Full product specification: see `PRD_Prompt_Gallery_App.md` (referenced by secti
 | --- | --- | --- |
 | **Frontend** | Next.js 16 (App Router) · React 19 | UI framework |
 | **Styling** | Tailwind CSS 3 · shadcn/ui (Radix primitives) | Design system, dark-first theme per PRD §9.1 |
-| **State** | @tanstack/react-query | Server-state & data fetching |
-| **Realtime** | socket.io-client | Live chat (Phase 3) |
+| **State** | @tanstack/react-query (dep) | Server-state & data fetching (planned usage) |
+| **Streaming** | Server-Sent Events (SSE) | Live chat responses (Phase 3) |
 | **Backend** | Next.js Route Handlers (`/api/*`) | Serverless endpoints |
 | **Database** | Firebase Firestore | Templates, users, versions, sessions |
-| **Storage** | Cloudinary (25 GB free) | Generated + template images |
-| **Auth** | Firebase Auth / Google OAuth | Planned (Phase 2) |
-| **LLM** | Zhipu GLM-3 (`glm-3-5-turbo`) | Prompt refinement assistant (Phase 3) |
-| **Image Gen** | Hugging Face API + Replicate | Free-tier image generation (Phase 4) |
+| **Storage** | Cloudinary (25 GB free) | Generated + template images (planned, Phase 4) |
+| **Auth** | Firebase Auth / Google OAuth | Planned (Phase 2+) |
+| **LLM** | Zhipu GLM (`glm-4.5-flash`, OpenAI-compatible v4 API) | Prompt refinement assistant (Phase 3) |
+| **Image Gen** | Hugging Face API + Replicate | Free-tier image generation (planned, Phase 4) |
 | **Deployment** | Vercel (free tier) | Production hosting |
 
 ### Version note
@@ -96,18 +97,18 @@ The original spec targeted Next.js 14. This project was upgraded to **Next.js 16
 
 ```text
 ┌────────────────────────── User Browser ──────────────────────────┐
-│  Gallery (browse) ──► Customize View ──► Chat with AI ──► Image  │
+│  Gallery (browse) ──► Detail View ──► Chat with AI ──► Image     │
 └──────────────┬────────────────────────────────────────┬───────────┘
                │ HTTP /api/*                            │
 ┌──────────────▼────────────────────────────────────────▼───────────┐
 │                      Next.js 16 (Vercel)                          │
-│  Route Handlers:  /api · /api/auth · /api/templates ·             │
-│                   /api/chat · /api/generate · /api/user-versions  │
+│  Route Handlers:  /api · /api/templates(+ /:id) · /api/chat ·     │
+│                   /api/auth · /api/generate · /api/user-versions  │
 └──────┬──────────────────┬──────────────────────┬──────────────────┘
-       │ Firebase SDK     │ GLM-3 API            │ HF / Replicate
+       │ Firebase SDK     │ GLM API (live)       │ HF / Replicate
 ┌──────▼─────────┐ ┌──────▼───────────┐ ┌────────▼─────────────────┐
-│ Firestore +    │ │ Zhipu GLM-3      │ │ Hugging Face · Replicate │
-│ Storage + Auth │ │ (Phase 3)        │ │ (Phase 4)                │
+│ Firestore +    │ │ Zhipu GLM        │ │ Hugging Face · Replicate │
+│ Storage + Auth │ │ (Phase 3 ✅)     │ │ (planned, Phase 4)       │
 └────────────────┘ └──────────────────┘ └──────────────────────────┘
 ```
 
@@ -119,35 +120,42 @@ The original spec targeted Next.js 14. This project was upgraded to **Next.js 16
 .
 ├── app/                          # Next.js App Router
 │   ├── layout.tsx                # Root layout + metadata (dark theme)
-│   ├── page.tsx                  # Landing page
+│   ├── page.tsx                  # Landing page with phase tracker
 │   ├── globals.css               # Tailwind + PRD color tokens
+│   ├── gallery/                  # Phase 2 — gallery pages
+│   │   ├── page.tsx              # Browse: search, filter, sort, infinite scroll
+│   │   └── [id]/page.tsx         # Template detail view (SSR)
+│   ├── chat/                     # Phase 3 — AI refinement chat
+│   │   ├── page.tsx              # Blank-slate chat (no template)
+│   │   └── [templateId]/page.tsx # Chat pre-loaded with a template
 │   └── api/                      # Route Handlers (serverless)
 │       ├── route.ts              # GET /api → health check (live ✅)
-│       ├── auth/                 # Auth endpoints (Phase 2+)
-│       ├── templates/            # Gallery CRUD (Phase 2)
-│       ├── chat/                 # GLM-3 refinement (Phase 3)
-│       ├── generate/             # Image generation (Phase 4)
-│       └── user-versions/        # Saved custom prompts (Phase 2/3)
+│       ├── templates/            # GET list + GET /:id (live ✅)
+│       ├── chat/                 # POST — GLM streaming/SSE + non-streaming (live ✅)
+│       ├── auth/                 # Auth endpoints (planned, Phase 2+)
+│       ├── generate/             # Image generation (planned, Phase 4)
+│       └── user-versions/        # Saved custom prompts (planned, Phase 2/3)
 ├── components/
 │   ├── ui/                       # shadcn/ui (button, card, dialog, …)
-│   ├── layouts/                  # Nav, footer, shells (Phase 2)
-│   ├── gallery/                  # Gallery cards & filters (Phase 2)
-│   └── customize/                # Customize + chat view (Phase 3)
+│   ├── layouts/                  # Nav, footer, shell
+│   ├── gallery/                  # Gallery cards, filters, skeletons
+│   └── customize/                # Chat UI: interface, bubbles, input, suggestions
 ├── lib/
 │   ├── firebase.ts               # Firebase client (guarded init, browser)
 │   ├── firebase-admin.ts         # Firebase Admin SDK (guarded init, server)
-│   ├── cloudinary.ts             # Cloudinary image upload & management
+│   ├── cloudinary.ts             # Cloudinary upload & management (planned use)
+│   ├── data/templates.ts         # 20 seed templates (local fallback)
+│   ├── services/
+│   │   ├── templates.ts          # List/get/categories — Firestore w/ seed fallback
+│   │   └── glm.ts                # GLM chat: streaming + non-streaming + system prompt
 │   ├── types/index.ts            # Domain types mirroring PRD §4
-│   ├── utils.ts                  # cn() classname helper
-│   ├── services/                 # Data services (Phase 2)
-│   └── types/                    # Domain types
+│   └── utils.ts                  # cn() classname helper
 ├── public/images/                # Local assets
 ├── components.json               # shadcn/ui config
 ├── next.config.ts                # Image domains (Firebase, HF, Replicate)
 ├── tailwind.config.ts            # Theme + PRD palette
 ├── eslint.config.mjs             # ESLint 9 flat config
 ├── firestore.rules               # Firestore security rules
-├── storage.rules                 # Firebase Storage rules (deprecated, using Cloudinary)
 ├── firebase.json                 # Firebase project config + emulators
 ├── .env.local                    # Local secrets (git-ignored)
 └── .env.example                  # Env template (committed)
@@ -211,7 +219,7 @@ npm run build       # Production build
 
 ## 🔑 Environment Variables
 
-Copy `.env.example` → `.env.local`. All variables are required before enabling the related feature; placeholder values keep the app running in the meantime (`lib/firebase.ts` skips initialization until real credentials are present).
+Copy `.env.example` → `.env.local`. All variables are required before enabling the related feature; placeholder values keep the app running in the meantime (`lib/firebase.ts` skips initialization until real credentials are present, and the templates/chat services fall back gracefully).
 
 | Variable | Needed for | Where to get it |
 | --- | --- | --- |
@@ -222,12 +230,13 @@ Copy `.env.example` → `.env.local`. All variables are required before enabling
 | `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID` | Firebase (client) | Firebase console → Web app |
 | `NEXT_PUBLIC_FIREBASE_APP_ID` | Firebase (client) | Firebase console → Web app |
 | `FIREBASE_SERVICE_ACCOUNT` | Firebase Admin (server) | Firebase console → Service accounts → Generate new private key |
-| `CLOUDINARY_CLOUD_NAME` | Cloudinary (image storage) | Cloudinary dashboard → Copy cloud name |
-| `CLOUDINARY_UPLOAD_PRESET` | Cloudinary (image storage) | Cloudinary Settings → Upload → Add upload preset |
+| `GLM_API_KEY` | GLM-3 chat (**live, Phase 3**) | [open.bigmodel.cn](https://open.bigmodel.cn/) |
+| `GLM_API_ENDPOINT` | GLM-3 chat (**live, Phase 3**) | Default endpoint in `.env.example` |
+| `GLM_MODEL` | GLM-3 chat (**live, Phase 3**) | Default `glm-4.5-flash` |
+| `CLOUDINARY_CLOUD_NAME` | Cloudinary (image storage, Phase 4) | Cloudinary dashboard → Copy cloud name |
+| `CLOUDINARY_UPLOAD_PRESET` | Cloudinary (image storage, Phase 4) | Cloudinary Settings → Upload → Add upload preset |
 | `NEXT_PUBLIC_API_URL` | Client API calls | Default `http://localhost:3000/api` |
 | `NEXT_PUBLIC_SITE_URL` | Absolute URLs / OG | Default `http://localhost:3000` |
-| `GLM_API_KEY` | GLM-3 chat (Phase 3) | [open.bigmodel.cn](https://open.bigmodel.cn/) |
-| `GLM_API_ENDPOINT` | GLM-3 chat (Phase 3) | Default endpoint in `.env.example` |
 | `HUGGING_FACE_API_KEY` | Image gen (Phase 4) | [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens) |
 | `REPLICATE_API_TOKEN` | Image gen (Phase 4) | [replicate.com/account](https://replicate.com/account) |
 | `ENVIRONMENT` | Runtime mode | `development` / `production` |
@@ -247,14 +256,13 @@ Base URL: `/api` (local: `http://localhost:3000/api`). All responses follow the 
 | Method | Endpoint | Description | Status |
 | --- | --- | --- | --- |
 | GET | `/api` | Health check / uptime probe | ✅ Live |
-| POST | `/api/auth` | Auth actions (login / logout / register / me) | 🚧 Phase 2 |
-| GET | `/api/templates` | List templates (+ `?category=` / `?q=` filters) | 🚧 Phase 2 |
-| GET | `/api/templates/:id` | Single template | 🚧 Phase 2 |
-| POST | `/api/user-versions` | Create a saved custom prompt | 🚧 Phase 2/3 |
-| GET | `/api/user-versions` | List the caller's versions | 🚧 Phase 2/3 |
-| POST | `/api/chat` | Send message → GLM-3 refinement | 🚧 Phase 3 |
-| POST | `/api/generate` | Generate image with selected model | 🚧 Phase 4 |
-| GET | `/api/models` | List supported image models | 🚧 Phase 4 |
+| GET | `/api/templates` | List templates (`?q=` / `?category=` / `?sort=` / `?page=` / `?limit=` / `?offset=`, `?categories=true`) | ✅ Live |
+| GET | `/api/templates/:id` | Single template | ✅ Live |
+| POST | `/api/chat` | Send message → GLM refinement (`stream: true` = SSE, `templateId` optional) | ✅ Live |
+| POST | `/api/auth` | Auth actions (login / logout / register / me) | 🚧 Planned (Phase 2+) |
+| GET/POST | `/api/user-versions` | Save & list custom prompt versions | 🚧 Planned (Phase 2/3) |
+| POST | `/api/generate` | Generate image with selected model | 🚧 Planned (Phase 4) |
+| GET | `/api/models` | List supported image models | 🚧 Planned (Phase 4) |
 
 Endpoint stubs return `501` with `{ "success": false, "error": "Not implemented yet" }` until their phase lands.
 
@@ -262,7 +270,7 @@ Endpoint stubs return `501` with `{ "success": false, "error": "Not implemented 
 
 ## 🔥 Firebase Setup
 
-The Firebase layer (client SDK, security rules) is **already wired into the repo** — it only needs a real project to point at.
+The Firebase layer (client SDK, security rules) is **already wired into the repo** — it only needs a real project to point at. The templates API automatically falls back to the 20 local seed templates when Firestore isn't configured, so the gallery works end-to-end out of the box.
 
 ### 1. Create the project
 
@@ -331,9 +339,9 @@ Development is executed in **phases** so progress can be reviewed and resumed ea
 | Phase | Scope | Status |
 | --- | --- | --- |
 | **1** | Foundation & setup — scaffold, design system, Firebase wiring, env, API skeleton, rules | ✅ **Done** (commit `70fbb50`) |
-| **2** | Gallery & database — template schema + seeds, browse UI, search/filter, template endpoints | ⏳ Next |
-| **3** | AI chat — GLM-3 integration, chat UI, session management, prompt progression | Planned |
-| **4** | Image generation — Hugging Face / Replicate, model selector, results & storage | Planned |
+| **2** | Gallery & database — 20 seed templates, browse UI with search/filter/sort/infinite scroll, detail view, template endpoints | ✅ **Done** (commits `f91415a`, `7ec4ee4`, `f934fe5`) |
+| **3** | AI chat — GLM integration (SSE streaming + non-streaming), chat UI, prompt progression sidebar, turn history | ✅ **Done** (commit `ae262ae`) |
+| **4** | Image generation — Hugging Face / Replicate, model selector, results & storage | ⏳ Next |
 | **5** | Testing & deployment — unit/integration tests, perf, security audit, launch | Planned |
 
 > Process history lives in the git log — every phase, decision (e.g. the Next.js 16 upgrade) and follow-up is committed for traceability.
@@ -407,4 +415,4 @@ Maintained by **Faber Aritonang** — issues & feature requests via the [GitHub 
 
 ---
 
-<div align="center"><sub>PromtPicGallery · Phase 1 Foundation · Built with the 100% free stack</sub></div>
+<div align="center"><sub>PromtPicGallery · Phases 1–3 Complete · Built with the 100% free stack</sub></div>
