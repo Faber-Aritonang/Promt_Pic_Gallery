@@ -20,6 +20,12 @@ export function Footer() {
             Gallery
           </Link>
           <Link
+            href="/chat"
+            className="hover:text-foreground transition-colors"
+          >
+            Chat
+          </Link>
+          <Link
             href="https://github.com/Faber-Aritonang/Promt_Pic_Gallery"
             target="_blank"
             className="hover:text-foreground transition-colors"

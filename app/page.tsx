@@ -15,8 +15,8 @@ const stack = [
 
 const phases = [
   { n: "Phase 1", title: "Foundation & Setup", state: "done" as const },
-  { n: "Phase 2", title: "Gallery & Database", state: "active" as const },
-  { n: "Phase 3", title: "AI Chat Integration", state: "upcoming" as const },
+  { n: "Phase 2", title: "Gallery & Database", state: "done" as const },
+  { n: "Phase 3", title: "AI Chat Integration", state: "active" as const },
   { n: "Phase 4", title: "Image Generation", state: "upcoming" as const },
   { n: "Phase 5", title: "Testing & Deployment", state: "upcoming" as const },
 ];
@@ -28,7 +28,7 @@ export default function Home() {
         <div className="flex max-w-2xl flex-col items-center gap-4 text-center">
           <Badge variant="secondary" className="gap-1">
             <span className="h-2 w-2 rounded-full bg-success" />
-            Phase 2 in progress
+            Phase 3 in progress
           </Badge>
           <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
             PromtPicGallery
@@ -50,6 +50,9 @@ export default function Home() {
         <div className="flex gap-3">
           <Button asChild>
             <Link href="/gallery">Browse Gallery</Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link href="/chat">Start Chatting</Link>
           </Button>
           <Button asChild variant="outline">
             <Link href="/api">Check API health</Link>

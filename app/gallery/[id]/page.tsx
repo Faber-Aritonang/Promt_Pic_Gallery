@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Star, Eye, Zap, Copy, ArrowLeft, Lightbulb } from "lucide-react";
+import { Star, Eye, Zap, Copy, ArrowLeft, Lightbulb, Sparkles } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import type { Metadata } from "next";
@@ -150,17 +150,24 @@ export default async function TemplateDetailPage({
               <div className="rounded-lg bg-muted/50 p-4 text-sm leading-relaxed">
                 {template.original_prompt}
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                className="mt-3"
-                onClick={() => {
-                  navigator.clipboard.writeText(template.original_prompt);
-                }}
-              >
-                <Copy className="mr-2 h-3 w-3" />
-                Copy Prompt
-              </Button>
+              <div className="mt-3 flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    navigator.clipboard.writeText(template.original_prompt);
+                  }}
+                >
+                  <Copy className="mr-2 h-3 w-3" />
+                  Copy Prompt
+                </Button>
+                <Button size="sm" asChild>
+                  <Link href={`/chat/${template.id}`}>
+                    <Sparkles className="mr-2 h-3 w-3" />
+                    Refine with AI
+                  </Link>
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </div>
