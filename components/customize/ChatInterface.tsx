@@ -3,6 +3,7 @@
 import { MessageBubble } from "./MessageBubble";
 import { ChatInput } from "./ChatInput";
 import { PromptSuggestions } from "./PromptSuggestions";
+import { ImageGenerator } from "./ImageGenerator";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -265,7 +266,12 @@ export function ChatInterface({ template }: ChatInterfaceProps) {
 
           {/* Input area */}
           <div className="shrink-0 border-t bg-background p-4">
-            <div className="mx-auto max-w-4xl">
+            <div className="mx-auto max-w-4xl space-y-3">
+              <ImageGenerator
+                prompt={currentPrompt}
+                templateId={template?.id}
+                disabled={isStreaming}
+              />
               <ChatInput
                 onSend={handleSend}
                 disabled={isStreaming}

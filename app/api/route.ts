@@ -3,7 +3,7 @@ export async function GET() {
   return Response.json({
     status: "ok",
     message: "PromtPicGallery API is running",
-    phase: "4",
+    phase: "5",
     timestamp: new Date().toISOString(),
   });
 }

@@ -11,6 +11,7 @@ const stack = [
   "Firebase",
   "React Query",
   "GLM-4.5 (Phase 3)",
+  "Hugging Face (Phase 4)",
 ];
 
 type PhaseState = "done" | "active" | "upcoming";
@@ -19,7 +20,7 @@ const phases: { n: string; title: string; state: PhaseState }[] = [
   { n: "Phase 1", title: "Foundation & Setup", state: "done" },
   { n: "Phase 2", title: "Gallery & Database", state: "done" },
   { n: "Phase 3", title: "AI Chat Integration", state: "done" },
-  { n: "Phase 4", title: "Image Generation", state: "upcoming" },
+  { n: "Phase 4", title: "Image Generation", state: "done" },
   { n: "Phase 5", title: "Testing & Deployment", state: "upcoming" },
 ];
 
@@ -30,7 +31,7 @@ export default function Home() {
         <div className="flex max-w-2xl flex-col items-center gap-4 text-center">
           <Badge variant="secondary" className="gap-1">
             <span className="h-2 w-2 rounded-full bg-success" />
-            Phase 4 next
+            Phase 5 next
           </Badge>
           <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
             PromtPicGallery
