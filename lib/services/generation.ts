@@ -122,16 +122,23 @@ export async function generateWithHuggingFace(
     };
   }
 
-  const response = await fetch(`${HF_INFERENCE_URL}${model.id}`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-      "x-wait-for-model": "true",
-    },
-    body: JSON.stringify(body),
-    signal: AbortSignal.timeout(options?.timeoutMs ?? 90_000),
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${HF_INFERENCE_URL}${model.id}`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        "x-wait-for-model": "true",
+      },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(options?.timeoutMs ?? 90_000),
+    });
+  } catch {
+    throw new Error(
+      "Could not reach the Hugging Face API (network error). Check your internet connection and that api-inference.huggingface.co is not blocked."
+    );
+  }
 
   const contentType = response.headers.get("content-type") ?? "";
 
