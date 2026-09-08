@@ -85,7 +85,7 @@ Full product specification: see `PRD_Prompt_Gallery_App.md` (referenced by secti
 | **Storage** | Cloudinary (25 GB free) | Generated + template images (planned, Phase 4) |
 | **Auth** | Firebase Auth / Google OAuth | Planned (Phase 2+) |
 | **LLM** | Zhipu GLM (`glm-4.5-flash`, OpenAI-compatible v4 API) | Prompt refinement assistant (Phase 3) |
-| **Image Gen** | Hugging Face Inference API (+ Replicate planned) | Free-tier image generation (live, Phase 4) |
+| **Image Gen** | Hugging Face Inference Providers, `router.huggingface.co` (+ Replicate planned) | Free-tier image generation (live, Phase 4) |
 | **Deployment** | Vercel (free tier) | Production hosting |
 
 ### Version note
@@ -108,8 +108,8 @@ The original spec targeted Next.js 14. This project was upgraded to **Next.js 16
 └──────┬──────────────────┬──────────────────────┬──────────────────┘
        │ Firebase SDK     │ GLM API (live)       │ Hugging Face (live)
 ┌──────▼─────────┐ ┌──────▼───────────┐ ┌────────▼─────────────────┐
-│ Firestore +    │ │ Zhipu GLM        │ │ Hugging Face Inference  │
-│ Storage + Auth │ │ (Phase 3 ✅)     │ │ API (Phase 4 ✅)         │
+│ Firestore +    │ │ Zhipu GLM        │ │ HF Inference Providers  │
+│ Storage + Auth │ │ (Phase 3 ✅)     │ │ (Phase 4 ✅)             │
 └────────────────┘ └──────────────────┘ └──────────────────────────┘
 ```
 
@@ -344,7 +344,7 @@ Development is executed in **phases** so progress can be reviewed and resumed ea
 | **1** | Foundation & setup — scaffold, design system, Firebase wiring, env, API skeleton, rules | ✅ **Done** (commit `70fbb50`) |
 | **2** | Gallery & database — 20 seed templates, browse UI with search/filter/sort/infinite scroll, detail view, template endpoints | ✅ **Done** (commits `f91415a`, `7ec4ee4`, `f934fe5`) |
 | **3** | AI chat — GLM integration (SSE streaming + non-streaming), chat UI, prompt progression sidebar, turn history | ✅ **Done** (commit `ae262ae`) |
-| **4** | Image generation — Hugging Face Inference API, model selector, Cloudinary storage (Replicate as follow-up) | ✅ **Done** |
+| **4** | Image generation — Hugging Face Inference Providers, model selector, Cloudinary storage (Replicate as follow-up) | ✅ **Done** |
 | **5** | Testing & deployment — unit/integration tests, perf, security audit, launch | ⏳ Next |
 
 > Process history lives in the git log — every phase, decision (e.g. the Next.js 16 upgrade) and follow-up is committed for traceability.

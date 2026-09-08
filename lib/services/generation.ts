@@ -1,5 +1,7 @@
 // Image generation service — Phase 4.
-// Currently supports the Hugging Face Inference API (free tier).
+// Currently supports Hugging Face Inference Providers (free tier).
+// The legacy serverless endpoint (api-inference.huggingface.co) was retired in
+// late 2025 — the replacement lives at router.huggingface.co/hf-inference.
 // Replicate can be added later as an additional provider (see README roadmap).
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -22,14 +24,18 @@ export interface GenerateImageResult {
 }
 
 // ── Model catalog ──────────────────────────────────────────────────────────
-// Free text-to-image models available on the Hugging Face Inference API.
+// Free text-to-image models available via the HF Inference provider.
 
+// Curated free-tier text-to-image models served by the HF Inference provider.
+// Model availability on the free tier changes over time (large models like
+// FLUX.1 exceed the ~10B-parameter free limit) — if a model 404s, the API
+// returns a clear error and another model can be selected.
 export const imageModels: ImageModel[] = [
   {
-    id: "black-forest-labs/FLUX.1-schnell",
-    name: "FLUX.1 Schnell",
+    id: "stabilityai/stable-diffusion-3-medium-diffusers",
+    name: "Stable Diffusion 3 Medium",
     provider: "huggingface",
-    description: "Fast, high-quality generation from Black Forest Labs (Apache-2.0).",
+    description: "SD3 Medium — quality 1024px output, listed in the official HF Inference docs.",
     free: true,
     defaultWidth: 1024,
     defaultHeight: 1024,
@@ -65,7 +71,7 @@ export const imageModels: ImageModel[] = [
     id: "prompthero/openjourney",
     name: "Openjourney v4",
     provider: "huggingface",
-    description: "Midjourney-style artistic generations.",
+    description: "Midjourney-style artistic generations (based on SD 1.5).",
     free: true,
     defaultWidth: 512,
     defaultHeight: 512,
@@ -87,12 +93,14 @@ export function isHuggingFaceConfigured(): boolean {
   return Boolean(key && key.length > 0 && key !== "your_huggingface_api_key");
 }
 
-// ── Hugging Face Inference API ─────────────────────────────────────────────
+// ── Hugging Face Inference Providers ───────────────────────────────────────
 
-const HF_INFERENCE_URL = "https://api-inference.huggingface.co/models/";
+// HF Inference provider via the Inference Providers router (replaced the
+// retired api-inference.huggingface.co endpoint in late 2025).
+const HF_INFERENCE_URL = "https://router.huggingface.co/hf-inference/models/";
 
 /**
- * Generate an image from a text prompt using the Hugging Face Inference API.
+ * Generate an image from a text prompt via the HF Inference provider.
  * Uses `x-wait-for-model: true` so cold models are loaded before responding.
  */
 export async function generateWithHuggingFace(
@@ -136,7 +144,7 @@ export async function generateWithHuggingFace(
     });
   } catch {
     throw new Error(
-      "Could not reach the Hugging Face API (network error). Check your internet connection and that api-inference.huggingface.co is not blocked."
+      "Could not reach the Hugging Face API (network error). Check your internet connection and that router.huggingface.co is not blocked."
     );
   }
 

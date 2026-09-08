@@ -1,5 +1,5 @@
 // POST /api/generate — generate an image from a prompt with the selected model.
-// Phase 4 (Image Generation): Hugging Face Inference API → Cloudinary storage
+// Phase 4 (Image Generation): Hugging Face Inference Providers → Cloudinary storage
 // → optional Firestore record (best effort; skipped when not configured).
 //
 // Request body:

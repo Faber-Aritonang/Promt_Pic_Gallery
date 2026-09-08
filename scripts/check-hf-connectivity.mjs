@@ -4,16 +4,20 @@
 //
 // Tests, in order:
 //   1. Proxy env vars that Node.js would use
-//   2. DNS resolution of api-inference.huggingface.co
+//   2. DNS resolution of router.huggingface.co
 //   3. HTTPS reachability (HEAD request)
 //   4. A real generation call with your HUGGING_FACE_API_KEY
+//
+// Note: the legacy endpoint (api-inference.huggingface.co) was retired in
+// late 2025 — the current endpoint is router.huggingface.co/hf-inference.
 
 import dns from "node:dns/promises";
 import fs from "node:fs";
 import path from "node:path";
 
-const HF_HOST = "api-inference.huggingface.co";
-const MODEL = "black-forest-labs/FLUX.1-schnell";
+const HF_HOST = "router.huggingface.co";
+const HF_BASE = `${HF_HOST}/hf-inference/models`;
+const MODEL = "stabilityai/stable-diffusion-3-medium-diffusers";
 
 async function main() {
   console.log("── Proxy env vars (yang dilihat Node.js) ──");
@@ -52,19 +56,19 @@ async function main() {
   } catch (e) {
     console.log(`  FAIL → ${e.message}`);
     console.log(
-      "  → Node.js tidak bisa HTTPS padahal browser bisa? Kemungkinan besar: firewall Windows memblokir node.exe, atau proxy yang dipakai browser tidak dipakai Node.js."
+      "  → Node.js tidak bisa HTTPS padahal browser bisa? Kemungkinan besar: firewall memblokir node, atau proxy yang dipakai browser tidak dipakai Node.js."
     );
     return;
   }
 
-  console.log("\n── 3. Generate uji (FLUX.1-schnell, bisa 30–90 detik) ──");
+  console.log("\n── 3. Generate uji (bisa 30–90 detik) ──");
   const key = readEnv("HUGGING_FACE_API_KEY");
   if (!key || key === "your_huggingface_api_key") {
     console.log("  SKIP → HUGGING_FACE_API_KEY belum diisi di .env.local");
     return;
   }
   try {
-    const r = await fetch(`https://${HF_HOST}/models/${MODEL}`, {
+    const r = await fetch(`https://${HF_BASE}/${MODEL}`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${key}`,
