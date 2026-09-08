@@ -204,7 +204,7 @@ Open [http://localhost:3000](http://localhost:3000).
 The health check responds at [http://localhost:3000/api](http://localhost:3000/api):
 
 ```json
-{ "status": "ok", "message": "PromtPicGallery API is running", "phase": "1", "timestamp": "…" }
+{ "status": "ok", "message": "PromtPicGallery API is running", "phase": "4", "timestamp": "…" }
 ```
 
 ### 4. Verify
@@ -230,9 +230,9 @@ Copy `.env.example` → `.env.local`. All variables are required before enabling
 | `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID` | Firebase (client) | Firebase console → Web app |
 | `NEXT_PUBLIC_FIREBASE_APP_ID` | Firebase (client) | Firebase console → Web app |
 | `FIREBASE_SERVICE_ACCOUNT` | Firebase Admin (server) | Firebase console → Service accounts → Generate new private key |
-| `GLM_API_KEY` | GLM-3 chat (**live, Phase 3**) | [open.bigmodel.cn](https://open.bigmodel.cn/) |
-| `GLM_API_ENDPOINT` | GLM-3 chat (**live, Phase 3**) | Default endpoint in `.env.example` |
-| `GLM_MODEL` | GLM-3 chat (**live, Phase 3**) | Default `glm-4.5-flash` |
+| `GLM_API_KEY` | GLM chat (**live, Phase 3**) | [open.bigmodel.cn](https://open.bigmodel.cn/) |
+| `GLM_API_ENDPOINT` | GLM chat (**live, Phase 3**) | Default endpoint in `.env.example` |
+| `GLM_MODEL` | GLM chat (**live, Phase 3**) | Default `glm-4.5-flash` |
 | `CLOUDINARY_CLOUD_NAME` | Cloudinary (image storage, Phase 4) | Cloudinary dashboard → Copy cloud name |
 | `CLOUDINARY_UPLOAD_PRESET` | Cloudinary (image storage, Phase 4) | Cloudinary Settings → Upload → Add upload preset |
 | `NEXT_PUBLIC_API_URL` | Client API calls | Default `http://localhost:3000/api` |
