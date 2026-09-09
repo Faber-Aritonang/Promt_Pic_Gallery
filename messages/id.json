@@ -1,0 +1,130 @@
+{
+  "common": {
+    "appName": "PromtPicGallery",
+    "loading": "Memuat...",
+    "error": "Terjadi kesalahan",
+    "retry": "Coba Lagi",
+    "goHome": "Kembali ke Beranda",
+    "back": "Kembali",
+    "save": "Simpan",
+    "cancel": "Batal",
+    "delete": "Hapus",
+    "edit": "Ubah",
+    "copy": "Salin",
+    "copied": "Tersalin!",
+    "share": "Bagikan",
+    "export": "Ekspor",
+    "search": "Cari",
+    "noResults": "Tidak ada hasil ditemukan",
+    "seeMore": "Lihat Lebih",
+    "seeLess": "Lihat Kurang",
+    "close": "Tutup",
+    "confirm": "Konfirmasi",
+    "yes": "Ya",
+    "no": "Tidak",
+    "all": "Semua",
+    "or": "atau"
+  },
+  "nav": {
+    "gallery": "Galeri",
+    "chat": "AI Chat",
+    "profile": "Profil",
+    "signIn": "Masuk",
+    "signOut": "Keluar"
+  },
+  "home": {
+    "title": "Galeri Template Prompt Text-to-Image",
+    "subtitle": "Jelajahi, sesuaikan, dan buat dengan model AI favorit Anda",
+    "getStarted": "Mulai",
+    "browseGallery": "Jelajahi Galeri",
+    "startChat": "Mulai AI Chat"
+  },
+  "gallery": {
+    "title": "Galeri Template Prompt",
+    "subtitle": "Temukan dan gunakan template prompt yang dikurasi untuk generasi text-to-image",
+    "searchPlaceholder": "Cari template...",
+    "filterByCategory": "Filter berdasarkan kategori",
+    "sortBy": "Urutkan",
+    "sortPopular": "Populer",
+    "sortNewest": "Terbaru",
+    "sortRating": "Peringkat Tertinggi",
+    "sortMostUsed": "Paling Banyak Digunakan",
+    "categories": {
+      "all": "Semua Kategori",
+      "landscape": "Lanskap",
+      "portrait": "Potret",
+      "fantasy": "Fantasi",
+      "scifi": "Sci-Fi",
+      "food": "Makanan",
+      "abstract": "Abstrak",
+      "architecture": "Arsitektur",
+      "animals": "Hewan",
+      "nature": "Alam"
+    },
+    "noTemplates": "Tidak ada template ditemukan",
+    "tryDifferentSearch": "Coba pencarian atau filter yang berbeda"
+  },
+  "template": {
+    "prompt": "Prompt",
+    "styleTips": "Tips Gaya",
+    "variations": "Variasi",
+    "tags": "Tag",
+    "usedCount": "Digunakan {count} kali",
+    "rating": "Peringkat: {rating}/5",
+    "copyPrompt": "Salin Prompt",
+    "useInChat": "Gunakan di AI Chat",
+    "generateImage": "Buat Gambar"
+  },
+  "chat": {
+    "title": "Penyempurnaan Prompt AI",
+    "subtitle": "Chat dengan AI untuk menyempurnakan prompt Anda",
+    "inputPlaceholder": "Ketik prompt atau minta penyempurnaan...",
+    "sendMessage": "Kirim",
+    "generating": "AI sedang berpikir...",
+    "emptyState": "Mulai percakapan untuk menyempurnakan prompt Anda",
+    "emptyStateHint": "Ketik deskripsi gambar yang ingin Anda buat, dan AI akan membantu Anda menyempurnakannya menjadi prompt yang detail.",
+    "promptProgression": "Perkembangan Prompt",
+    "history": "Riwayat",
+    "newChat": "Chat Baru"
+  },
+  "imageGen": {
+    "title": "Buat Gambar",
+    "subtitle": "Ubah prompt Anda menjadi gambar",
+    "selectModel": "Pilih Model",
+    "generate": "Buat",
+    "generating": "Membuat...",
+    "download": "Unduh",
+    "shareImage": "Bagikan Gambar",
+    "noPrompt": "Masukkan prompt untuk membuat gambar",
+    "models": {
+      "huggingface": "Hugging Face (Gratis)",
+      "replicate": "Replicate (Berbayar)"
+    },
+    "history": "Riwayat Pembuatan",
+    "favorites": "Favorit"
+  },
+  "profile": {
+    "title": "Profil Anda",
+    "stats": "Statistik",
+    "totalVersions": "Total Versi",
+    "totalGenerations": "Total Pembuatan",
+    "favorites": "Favorit",
+    "recentActivity": "Aktivitas Terkini",
+    "noActivity": "Belum ada aktivitas",
+    "settings": "Pengaturan"
+  },
+  "errors": {
+    "notFound": "Halaman Tidak Ditemukan",
+    "notFoundDesc": "Halaman yang Anda cari tidak ada atau telah dipindahkan.",
+    "goToGallery": "Ke Galeri",
+    "serverError": "Kesalahan Server",
+    "unauthorized": "Tidak Terotentikasi",
+    "forbidden": "Akses Ditolak",
+    "rateLimit": "Terlalu banyak permintaan. Silakan coba lagi nanti.",
+    "networkError": "Kesalahan jaringan. Silakan periksa koneksi Anda."
+  },
+  "footer": {
+    "copyright": "© {year} PromtPicGallery. Hak cipta dilindungi.",
+    "builtWith": "Dibuat dengan Next.js & AI"
+  }
+}

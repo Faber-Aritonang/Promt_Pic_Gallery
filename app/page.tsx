@@ -1,101 +1,122 @@
+"use client";
+
 import Link from "next/link";
-import { Badge } from "@/components/ui/badge";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
-import { ShellLayout } from "@/components/layouts/ShellLayout";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import {
+  Sparkles,
+  MessageSquare,
+  Palette,
+  ArrowRight,
+  Zap,
+  Globe,
+} from "lucide-react";
 
-const stack = [
-  "Next.js 16",
-  "TypeScript",
-  "Tailwind CSS",
-  "shadcn/ui",
-  "Firebase",
-  "React Query",
-  "GLM-4.5 (Phase 3)",
-  "Hugging Face (Phase 4)",
-];
+export default function HomePage() {
+  const t = useTranslations();
 
-type PhaseState = "done" | "active" | "upcoming";
-
-const phases: { n: string; title: string; state: PhaseState }[] = [
-  { n: "Phase 1", title: "Foundation & Setup", state: "done" },
-  { n: "Phase 2", title: "Gallery & Database", state: "done" },
-  { n: "Phase 3", title: "AI Chat Integration", state: "done" },
-  { n: "Phase 4", title: "Image Generation", state: "done" },
-  { n: "Phase 5", title: "Testing & Deployment", state: "upcoming" },
-];
-
-export default function Home() {
   return (
-    <ShellLayout>
-      <main className="flex min-h-[calc(100vh-3.5rem)] flex-col items-center justify-center gap-8 px-6 py-16">
-        <div className="flex max-w-2xl flex-col items-center gap-4 text-center">
-          <Badge variant="secondary" className="gap-1">
-            <span className="h-2 w-2 rounded-full bg-success" />
-            Phase 5 next
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900/20 to-slate-900">
+      {/* Hero Section */}
+      <section className="relative overflow-hidden px-4 py-20 sm:px-6 lg:px-8">
+        <div className="absolute inset-0 bg-[url('/grid.svg')] bg-center [mask-image:linear-gradient(180deg,white,rgba(255,255,255,0))]" />
+        <div className="relative mx-auto max-w-4xl text-center">
+          <Badge variant="secondary" className="mb-4">
+            <Sparkles className="mr-1 h-3 w-3" />
+            AI-Powered Prompt Refinement
           </Badge>
-          <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
-            PromtPicGallery
+          <h1 className="mb-6 text-4xl font-bold tracking-tight text-white sm:text-6xl">
+            {t("home.title")}
           </h1>
-          <p className="text-muted-foreground">
-            Text-to-image prompt template gallery with AI-powered refinement.
-            Browse templates, chat with GLM to improve your prompt, and
-            generate images with the model of your choice.
+          <p className="mx-auto mb-8 max-w-2xl text-lg text-slate-300">
+            {t("home.subtitle")}
           </p>
-          <div className="flex flex-wrap items-center justify-center gap-2">
-            {stack.map((item) => (
-              <Badge key={item} variant="outline">
-                {item}
-              </Badge>
-            ))}
+          <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
+            <Link href="/gallery">
+              <Button size="lg" className="gap-2">
+                <Globe className="h-4 w-4" />
+                {t("home.browseGallery")}
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            </Link>
+            <Link href="/chat">
+              <Button size="lg" variant="outline" className="gap-2">
+                <MessageSquare className="h-4 w-4" />
+                {t("home.startChat")}
+              </Button>
+            </Link>
           </div>
         </div>
+      </section>
 
-        <div className="flex gap-3">
-          <Button asChild>
-            <Link href="/gallery">Browse Gallery</Link>
-          </Button>
-          <Button asChild variant="outline">
-            <Link href="/chat">Start Chatting</Link>
-          </Button>
-          <Button asChild variant="outline">
-            <Link href="/api">Check API health</Link>
-          </Button>
-          <Button asChild variant="outline">
-            <Link href="https://github.com/Faber-Aritonang/Promt_Pic_Gallery" target="_blank">
-              Docs
-            </Link>
-          </Button>
+      {/* Features Section */}
+      <section className="px-4 py-16 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-6xl">
+          <div className="grid gap-6 md:grid-cols-3">
+            <Card className="border-slate-800 bg-slate-900/50">
+              <CardHeader>
+                <Palette className="mb-2 h-8 w-8 text-blue-500" />
+                <CardTitle>{t("nav.gallery")}</CardTitle>
+                <CardDescription>
+                  {t("gallery.subtitle")}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Link href="/gallery">
+                  <Button variant="ghost" className="w-full gap-2">
+                    {t("home.browseGallery")}
+                    <ArrowRight className="h-4 w-4" />
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
+
+            <Card className="border-slate-800 bg-slate-900/50">
+              <CardHeader>
+                <MessageSquare className="mb-2 h-8 w-8 text-green-500" />
+                <CardTitle>{t("nav.chat")}</CardTitle>
+                <CardDescription>
+                  {t("chat.subtitle")}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Link href="/chat">
+                  <Button variant="ghost" className="w-full gap-2">
+                    {t("home.startChat")}
+                    <ArrowRight className="h-4 w-4" />
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
+
+            <Card className="border-slate-800 bg-slate-900/50">
+              <CardHeader>
+                <Zap className="mb-2 h-8 w-8 text-yellow-500" />
+                <CardTitle>{t("imageGen.title")}</CardTitle>
+                <CardDescription>
+                  {t("imageGen.subtitle")}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Link href="/gallery">
+                  <Button variant="ghost" className="w-full gap-2">
+                    {t("template.generateImage")}
+                    <ArrowRight className="h-4 w-4" />
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
+          </div>
         </div>
-
-        <ol className="grid w-full max-w-xl gap-2">
-          {phases.map((phase) => (
-            <li
-              key={phase.n}
-              className="flex items-center justify-between rounded-lg border bg-card px-4 py-3 text-sm"
-            >
-              <span className="flex items-center gap-3 font-medium">
-                <span className="text-muted-foreground">{phase.n}</span>
-                {phase.title}
-              </span>
-              <Badge
-                variant={
-                  phase.state === "active"
-                    ? "default"
-                    : phase.state === "done"
-                      ? "secondary"
-                      : "outline"
-                }
-              >
-                {phase.state === "active"
-                  ? "In progress"
-                  : phase.state === "done"
-                    ? "✅ Done"
-                    : "Planned"}
-              </Badge>
-            </li>
-          ))}
-        </ol>
-      </main>
-    </ShellLayout>
+      </section>
+    </div>
   );
 }

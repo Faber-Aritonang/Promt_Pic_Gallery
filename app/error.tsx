@@ -1,61 +1,45 @@
 "use client";
 
-import { useEffect } from "react";
-import { ShellLayout } from "@/components/layouts/ShellLayout";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { AlertTriangle, RefreshCw, Home } from "lucide-react";
 import Link from "next/link";
 
-export default function GlobalError({
+export default function Error({
   error,
   reset,
 }: {
   error: Error & { digest?: string };
   reset: () => void;
 }) {
-  useEffect(() => {
-    // Log error to monitoring service in production
-    console.error("[GlobalError]", error);
-  }, [error]);
+  const t = useTranslations("errors");
 
   return (
-    <ShellLayout>
-      <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center px-4">
-        <Card className="w-full max-w-md">
-          <CardContent className="flex flex-col items-center gap-4 p-8 text-center">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-destructive/10">
-              <AlertTriangle className="h-8 w-8 text-destructive" />
-            </div>
-
-            <div>
-              <h1 className="text-xl font-bold">Something went wrong</h1>
-              <p className="mt-2 text-sm text-muted-foreground">
-                An unexpected error occurred. Please try again.
-              </p>
-            </div>
-
-            {error.digest && (
-              <p className="rounded bg-muted px-3 py-1 font-mono text-xs text-muted-foreground">
-                Error ID: {error.digest}
-              </p>
-            )}
-
-            <div className="flex gap-3">
-              <Button onClick={reset} variant="default" className="gap-2">
-                <RefreshCw className="h-4 w-4" />
-                Try Again
-              </Button>
-              <Button asChild variant="outline" className="gap-2">
-                <Link href="/">
-                  <Home className="h-4 w-4" />
-                  Go Home
-                </Link>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+    <div className="flex min-h-[60vh] flex-col items-center justify-center px-4 text-center">
+      <div className="rounded-full bg-red-500/10 p-4 mb-6">
+        <AlertTriangle className="h-12 w-12 text-red-500" />
       </div>
-    </ShellLayout>
+      <h1 className="mb-2 text-4xl font-bold">{t("serverError")}</h1>
+      <p className="mb-2 max-w-md text-muted-foreground">
+        {t("notFoundDesc")}
+      </p>
+      {error.digest && (
+        <p className="mb-6 font-mono text-sm text-muted-foreground">
+          Error ID: {error.digest}
+        </p>
+      )}
+      <div className="flex gap-4">
+        <Button variant="outline" onClick={reset} className="gap-2">
+          <RefreshCw className="h-4 w-4" />
+          Retry
+        </Button>
+        <Link href="/">
+          <Button className="gap-2">
+            <Home className="h-4 w-4" />
+            Go Home
+          </Button>
+        </Link>
+      </div>
+    </div>
   );
 }

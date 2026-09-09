@@ -2,6 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { ShellLayout } from "@/components/layouts/ShellLayout";
 import { GalleryFilters } from "@/components/gallery/GalleryFilters";
 import { GalleryGrid } from "@/components/gallery/GalleryGrid";
@@ -44,6 +45,7 @@ function GallerySkeleton() {
 }
 
 function GalleryContent() {
+  const t = useTranslations("gallery");
   const searchParams = useSearchParams();
   const [templates, setTemplates] = useState<Template[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -62,7 +64,6 @@ function GalleryContent() {
   const category = searchParams.get("category") ?? "";
   const sort = searchParams.get("sort") ?? "popular";
 
-  // Build fetch URL from current filters
   const buildFetchUrl = useCallback(
     (offset: number) => {
       const params = new URLSearchParams();
@@ -76,7 +77,6 @@ function GalleryContent() {
     [q, category, sort]
   );
 
-  // Fetch first page when filters change
   const prevFiltersRef = useRef(`${q}|${category}|${sort}`);
   useEffect(() => {
     const currentFilters = `${q}|${category}|${sort}`;
@@ -133,7 +133,6 @@ function GalleryContent() {
     };
   }, [q, category, sort, buildFetchUrl]);
 
-  // Fetch next page (append)
   const fetchNextPage = useCallback(async () => {
     if (loadingMore || !hasMore || nextOffset < 0) return;
 
@@ -156,7 +155,6 @@ function GalleryContent() {
     }
   }, [loadingMore, hasMore, nextOffset, buildFetchUrl]);
 
-  // Intersection Observer for infinite scroll
   useEffect(() => {
     if (observerRef.current) {
       observerRef.current.disconnect();
@@ -183,15 +181,13 @@ function GalleryContent() {
   return (
     <ShellLayout>
       <div className="mx-auto max-w-6xl px-4 py-8">
-        {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight">Template Gallery</h1>
+          <h1 className="text-3xl font-bold tracking-tight">{t("title")}</h1>
           <p className="mt-2 text-muted-foreground">
-            Browse and discover prompt templates for text-to-image AI generation.
+            {t("subtitle")}
           </p>
         </div>
 
-        {/* Filters */}
         <div className="mb-6">
           <GalleryFilters
             categories={categories}
@@ -201,14 +197,12 @@ function GalleryContent() {
           />
         </div>
 
-        {/* Results count */}
         {!loading && (
           <p className="mb-4 text-sm text-muted-foreground">
             {total} template{total !== 1 ? "s" : ""} found
           </p>
         )}
 
-        {/* Grid */}
         {loading ? (
           <GallerySkeleton />
         ) : error ? (
@@ -233,10 +227,8 @@ function GalleryContent() {
               skeletonCount={4}
             />
 
-            {/* Infinite scroll trigger */}
             <div ref={loadMoreRef} className="h-4" aria-hidden="true" />
 
-            {/* End of results indicator */}
             {!hasMore && templates.length > 0 && (
               <p className="mt-8 text-center text-sm text-muted-foreground">
                 You&apos;ve reached the end of the gallery

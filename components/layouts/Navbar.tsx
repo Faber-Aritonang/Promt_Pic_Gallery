@@ -2,17 +2,20 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { AuthButton } from "@/components/layouts/AuthButton";
+import { LanguageSwitcher } from "@/components/layouts/LanguageSwitcher";
 
 const navLinks = [
-  { href: "/", label: "Home" },
-  { href: "/gallery", label: "Gallery" },
-  { href: "/chat", label: "Chat" },
+  { href: "/", labelKey: "home" },
+  { href: "/gallery", labelKey: "gallery" },
+  { href: "/chat", labelKey: "chat" },
 ];
 
 export function Navbar() {
+  const t = useTranslations("nav");
   const pathname = usePathname();
 
   return (
@@ -37,11 +40,14 @@ export function Navbar() {
                     "bg-accent text-accent-foreground"
                 )}
               >
-                <Link href={link.href}>{link.label}</Link>
+                <Link href={link.href}>
+                  {t(link.labelKey as "gallery" | "chat")}
+                </Link>
               </Button>
             ))}
           </nav>
-          <div className="ml-2 border-l pl-2">
+          <div className="ml-2 border-l pl-2 flex items-center gap-2">
+            <LanguageSwitcher />
             <AuthButton />
           </div>
         </div>

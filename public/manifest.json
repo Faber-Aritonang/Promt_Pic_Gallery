@@ -1,0 +1,27 @@
+{
+  "name": "PromtPicGallery",
+  "short_name": "PromtPic",
+  "description": "Text-to-image prompt template gallery with AI-powered refinement. Browse, customize, and generate with your favorite AI models.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#2563eb",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["design", "developer", "productivity"],
+  "lang": "en",
+  "dir": "ltr"
+}

@@ -1,0 +1,130 @@
+{
+  "common": {
+    "appName": "PromtPicGallery",
+    "loading": "Loading...",
+    "error": "Something went wrong",
+    "retry": "Try Again",
+    "goHome": "Go Home",
+    "back": "Back",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "copy": "Copy",
+    "copied": "Copied!",
+    "share": "Share",
+    "export": "Export",
+    "search": "Search",
+    "noResults": "No results found",
+    "seeMore": "See More",
+    "seeLess": "See Less",
+    "close": "Close",
+    "confirm": "Confirm",
+    "yes": "Yes",
+    "no": "No",
+    "all": "All",
+    "or": "or"
+  },
+  "nav": {
+    "gallery": "Gallery",
+    "chat": "AI Chat",
+    "profile": "Profile",
+    "signIn": "Sign In",
+    "signOut": "Sign Out"
+  },
+  "home": {
+    "title": "Text-to-Image Prompt Template Gallery",
+    "subtitle": "Browse, customize, and generate with your favorite AI models",
+    "getStarted": "Get Started",
+    "browseGallery": "Browse Gallery",
+    "startChat": "Start AI Chat"
+  },
+  "gallery": {
+    "title": "Prompt Template Gallery",
+    "subtitle": "Discover and use curated prompt templates for text-to-image generation",
+    "searchPlaceholder": "Search templates...",
+    "filterByCategory": "Filter by category",
+    "sortBy": "Sort by",
+    "sortPopular": "Popular",
+    "sortNewest": "Newest",
+    "sortRating": "Top Rated",
+    "sortMostUsed": "Most Used",
+    "categories": {
+      "all": "All Categories",
+      "landscape": "Landscape",
+      "portrait": "Portrait",
+      "fantasy": "Fantasy",
+      "scifi": "Sci-Fi",
+      "food": "Food",
+      "abstract": "Abstract",
+      "architecture": "Architecture",
+      "animals": "Animals",
+      "nature": "Nature"
+    },
+    "noTemplates": "No templates found",
+    "tryDifferentSearch": "Try a different search or filter"
+  },
+  "template": {
+    "prompt": "Prompt",
+    "styleTips": "Style Tips",
+    "variations": "Variations",
+    "tags": "Tags",
+    "usedCount": "Used {count} times",
+    "rating": "Rating: {rating}/5",
+    "copyPrompt": "Copy Prompt",
+    "useInChat": "Use in AI Chat",
+    "generateImage": "Generate Image"
+  },
+  "chat": {
+    "title": "AI Prompt Refinement",
+    "subtitle": "Chat with AI to refine your prompt",
+    "inputPlaceholder": "Type your prompt or ask for refinement...",
+    "sendMessage": "Send",
+    "generating": "AI is thinking...",
+    "emptyState": "Start a conversation to refine your prompt",
+    "emptyStateHint": "Type a description of the image you want to create, and AI will help you refine it into a detailed prompt.",
+    "promptProgression": "Prompt Progression",
+    "history": "History",
+    "newChat": "New Chat"
+  },
+  "imageGen": {
+    "title": "Generate Image",
+    "subtitle": "Turn your prompt into an image",
+    "selectModel": "Select Model",
+    "generate": "Generate",
+    "generating": "Generating...",
+    "download": "Download",
+    "shareImage": "Share Image",
+    "noPrompt": "Enter a prompt to generate an image",
+    "models": {
+      "huggingface": "Hugging Face (Free)",
+      "replicate": "Replicate (Paid)"
+    },
+    "history": "Generation History",
+    "favorites": "Favorites"
+  },
+  "profile": {
+    "title": "Your Profile",
+    "stats": "Statistics",
+    "totalVersions": "Total Versions",
+    "totalGenerations": "Total Generations",
+    "favorites": "Favorites",
+    "recentActivity": "Recent Activity",
+    "noActivity": "No activity yet",
+    "settings": "Settings"
+  },
+  "errors": {
+    "notFound": "Page Not Found",
+    "notFoundDesc": "The page you're looking for doesn't exist or has been moved.",
+    "goToGallery": "Go to Gallery",
+    "serverError": "Server Error",
+    "unauthorized": "Unauthorized",
+    "forbidden": "Access Denied",
+    "rateLimit": "Too many requests. Please try again later.",
+    "networkError": "Network error. Please check your connection."
+  },
+  "footer": {
+    "copyright": "© {year} PromtPicGallery. All rights reserved.",
+    "builtWith": "Built with Next.js & AI"
+  }
+}
