@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { AuthButton } from "@/components/layouts/AuthButton";
 
 const navLinks = [
   { href: "/", label: "Home" },
@@ -22,23 +23,28 @@ export function Navbar() {
           <span>PromtPicGallery</span>
         </Link>
 
-        <nav className="flex items-center gap-1">
-          {navLinks.map((link) => (
-            <Button
-              key={link.href}
-              variant="ghost"
-              size="sm"
-              asChild
-              className={cn(
-                "text-sm",
-                pathname === link.href &&
-                  "bg-accent text-accent-foreground"
-              )}
-            >
-              <Link href={link.href}>{link.label}</Link>
-            </Button>
-          ))}
-        </nav>
+        <div className="flex items-center gap-1">
+          <nav className="flex items-center gap-1">
+            {navLinks.map((link) => (
+              <Button
+                key={link.href}
+                variant="ghost"
+                size="sm"
+                asChild
+                className={cn(
+                  "text-sm",
+                  pathname === link.href &&
+                    "bg-accent text-accent-foreground"
+                )}
+              >
+                <Link href={link.href}>{link.label}</Link>
+              </Button>
+            ))}
+          </nav>
+          <div className="ml-2 border-l pl-2">
+            <AuthButton />
+          </div>
+        </div>
       </div>
     </header>
   );

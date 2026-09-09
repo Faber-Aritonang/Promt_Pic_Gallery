@@ -27,12 +27,14 @@ interface ImageModel {
   free: boolean;
   defaultWidth: number;
   defaultHeight: number;
+  available?: boolean;
 }
 
 interface GenerateResult {
   image_url: string;
   model_used: string;
   model_name: string;
+  provider: string;
   width: number;
   height: number;
   generation_time_ms: number;
@@ -41,6 +43,8 @@ interface GenerateResult {
 
 interface ModelsResponse {
   configured: boolean;
+  hf_configured: boolean;
+  replicate_configured: boolean;
   default_model: string | null;
   models: ImageModel[];
 }
@@ -59,6 +63,7 @@ export function ImageGenerator({
 }: ImageGeneratorProps) {
   const [models, setModels] = useState<ImageModel[]>([]);
   const [configured, setConfigured] = useState(false);
+
   const [selectedModel, setSelectedModel] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -74,12 +79,11 @@ export function ImageGenerator({
         const data = json.data as ModelsResponse;
         setModels(data.models);
         setConfigured(data.configured);
+
         if (data.default_model) {
-          const defaultModel = data.default_model;
-          setSelectedModel((prev) => prev || defaultModel);
+          setSelectedModel((prev) => prev || data.default_model!);
         } else if (data.models.length > 0) {
-          const firstModel = data.models[0].id;
-          setSelectedModel((prev) => prev || firstModel);
+          setSelectedModel((prev) => prev || data.models[0].id);
         }
       })
       .catch(() => {
@@ -98,10 +102,19 @@ export function ImageGenerator({
     setResult(null);
 
     try {
+      // Determine provider from selected model
+      const model = models.find((m) => m.id === selectedModel);
+      const provider = model?.provider ?? "huggingface";
+
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt, model: selectedModel, templateId }),
+        body: JSON.stringify({
+          prompt,
+          model: selectedModel,
+          provider,
+          templateId,
+        }),
       });
       const json = await res.json();
       if (!json.success) {
@@ -115,9 +128,13 @@ export function ImageGenerator({
     } finally {
       setIsGenerating(false);
     }
-  }, [configured, prompt, selectedModel, templateId, isGenerating]);
+  }, [configured, prompt, selectedModel, models, templateId, isGenerating]);
 
   const hasPrompt = prompt.trim().length > 0;
+
+  // Group models by provider
+  const hfModels = models.filter((m) => m.provider === "huggingface");
+  const replicateModelsList = models.filter((m) => m.provider === "replicate");
 
   return (
     <div className="rounded-xl border bg-card p-3">
@@ -131,6 +148,11 @@ export function ImageGenerator({
               {result.model_name}
             </Badge>
           )}
+          {result?.provider && (
+            <Badge variant="outline" className="text-[10px]">
+              {result.provider}
+            </Badge>
+          )}
         </div>
 
         {configured ? (
@@ -140,15 +162,38 @@ export function ImageGenerator({
               onValueChange={setSelectedModel}
               disabled={isGenerating}
             >
-              <SelectTrigger className="h-8 w-44 text-xs">
+              <SelectTrigger className="h-8 w-52 text-xs">
                 <SelectValue placeholder="Select model" />
               </SelectTrigger>
               <SelectContent>
-                {models.map((m) => (
-                  <SelectItem key={m.id} value={m.id}>
-                    {m.name}
-                  </SelectItem>
-                ))}
+                {hfModels.length > 0 && (
+                  <>
+                    <SelectItem value="hf-header" disabled>
+                      <span className="text-muted-foreground">
+                        — Hugging Face (Free) —
+                      </span>
+                    </SelectItem>
+                    {hfModels.map((m) => (
+                      <SelectItem key={m.id} value={m.id}>
+                        {m.name}
+                      </SelectItem>
+                    ))}
+                  </>
+                )}
+                {replicateModelsList.length > 0 && (
+                  <>
+                    <SelectItem value="replicate-header" disabled>
+                      <span className="text-muted-foreground">
+                        — Replicate (Paid) —
+                      </span>
+                    </SelectItem>
+                    {replicateModelsList.map((m) => (
+                      <SelectItem key={m.id} value={m.id}>
+                        {m.name}
+                      </SelectItem>
+                    ))}
+                  </>
+                )}
               </SelectContent>
             </Select>
             <Button
@@ -172,7 +217,11 @@ export function ImageGenerator({
             <code className="rounded bg-muted px-1 py-0.5">
               HUGGING_FACE_API_KEY
             </code>{" "}
-            to .env.local to enable
+            or{" "}
+            <code className="rounded bg-muted px-1 py-0.5">
+              REPLICATE_API_TOKEN
+            </code>{" "}
+            to .env.local
           </p>
         )}
       </div>
@@ -208,7 +257,7 @@ export function ImageGenerator({
           </div>
           <div className="flex items-center justify-between px-3 py-2 text-[11px] text-muted-foreground">
             <span>
-              {result.model_name} ·{" "}
+              {result.model_name} · {result.provider} ·{" "}
               {(result.generation_time_ms / 1000).toFixed(1)}s ·{" "}
               {result.width}×{result.height}
             </span>
