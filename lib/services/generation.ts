@@ -1,8 +1,8 @@
 // Image generation service — Phase 4.
-// Currently supports Hugging Face Inference Providers (free tier).
+// Supports Hugging Face Inference Providers (free tier).
 // The legacy serverless endpoint (api-inference.huggingface.co) was retired in
 // late 2025 — the replacement lives at router.huggingface.co/hf-inference.
-// Replicate can be added later as an additional provider (see README roadmap).
+// Replicate is supported via lib/services/replicate.ts.
 
 // ── Types ──────────────────────────────────────────────────────────────────
 

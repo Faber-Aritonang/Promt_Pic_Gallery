@@ -5,9 +5,8 @@
 // ── Types ──────────────────────────────────────────────────────────────────
 
 export interface ReplicateModel {
-  id: string;
+  id: string; // format: "owner/model-name"
   name: string;
-  version: string;
   description: string;
   free: boolean;
   defaultWidth: number;
@@ -27,7 +26,6 @@ export const replicateModels: ReplicateModel[] = [
   {
     id: "black-forest-labs/flux-schnell",
     name: "FLUX.1 Schnell",
-    version: "latest",
     description: "Fast, high-quality text-to-image from Black Forest Labs.",
     free: false,
     defaultWidth: 1024,
@@ -36,7 +34,6 @@ export const replicateModels: ReplicateModel[] = [
   {
     id: "black-forest-labs/flux-dev",
     name: "FLUX.1 Dev",
-    version: "latest",
     description: "Higher quality FLUX model with more detail.",
     free: false,
     defaultWidth: 1024,
@@ -45,7 +42,6 @@ export const replicateModels: ReplicateModel[] = [
   {
     id: "stability-ai/sdxl",
     name: "Stable Diffusion XL",
-    version: "latest",
     description: "Stable Diffusion XL on Replicate.",
     free: false,
     defaultWidth: 1024,
@@ -54,7 +50,6 @@ export const replicateModels: ReplicateModel[] = [
   {
     id: "playgroundai/playground-v2.5-1024px-aesthetic",
     name: "Playground v2.5",
-    version: "latest",
     description: "Aesthetic-optimized image generation.",
     free: false,
     defaultWidth: 1024,
@@ -91,23 +86,26 @@ export async function generateWithReplicate(
   const apiToken = process.env.REPLICATE_API_TOKEN as string;
   const startedAt = Date.now();
 
-  // Create a prediction
-  const createResponse = await fetch("https://api.replicate.com/v1/predictions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiToken}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      version: model.version,
-      input: {
-        prompt,
-        width: options?.width ?? model.defaultWidth,
-        height: options?.height ?? model.defaultHeight,
+  // Create a prediction using the model endpoint (no version hash needed)
+  // Format: POST https://api.replicate.com/v1/models/{owner}/{name}/predictions
+  const createResponse = await fetch(
+    `https://api.replicate.com/v1/models/${model.id}/predictions`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiToken}`,
+        "Content-Type": "application/json",
       },
-    }),
-    signal: AbortSignal.timeout(options?.timeoutMs ?? 120_000),
-  });
+      body: JSON.stringify({
+        input: {
+          prompt,
+          width: options?.width ?? model.defaultWidth,
+          height: options?.height ?? model.defaultHeight,
+        },
+      }),
+      signal: AbortSignal.timeout(options?.timeoutMs ?? 120_000),
+    }
+  );
 
   if (!createResponse.ok) {
     const error = await createResponse.json().catch(() => ({}));

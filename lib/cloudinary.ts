@@ -2,13 +2,27 @@
 // Replaces Firebase Storage (free tier: 25 GB, no credit card).
 // See PRD Section 5.3 and Phase 4.
 
-const CLOUDINARY_CLOUD_NAME = process.env.CLOUDINARY_CLOUD_NAME;
-const CLOUDINARY_UPLOAD_PRESET = process.env.CLOUDINARY_UPLOAD_PRESET;
+// Read env vars via getters (not at module load time) so tests and
+// dynamic env changes work correctly.
+
+function getCloudName(): string {
+  return process.env.CLOUDINARY_CLOUD_NAME ?? "";
+}
+
+function getUploadPreset(): string {
+  return process.env.CLOUDINARY_UPLOAD_PRESET ?? "";
+}
 
 export const cloudinaryConfig = {
-  cloudName: CLOUDINARY_CLOUD_NAME,
-  uploadPreset: CLOUDINARY_UPLOAD_PRESET,
-  uploadUrl: `https://api.cloudinary.com/v1_2/${CLOUDINARY_CLOUD_NAME}/image/upload`,
+  get cloudName() {
+    return getCloudName();
+  },
+  get uploadPreset() {
+    return getUploadPreset();
+  },
+  get uploadUrl() {
+    return `https://api.cloudinary.com/v1_2/${getCloudName()}/image/upload`;
+  },
 };
 
 export interface CloudinaryUploadResult {
@@ -35,7 +49,10 @@ export async function uploadImage(
     tags?: string[];
   }
 ): Promise<CloudinaryUploadResult> {
-  if (!CLOUDINARY_CLOUD_NAME || !CLOUDINARY_UPLOAD_PRESET) {
+  const cloudName = getCloudName();
+  const uploadPreset = getUploadPreset();
+
+  if (!cloudName || !uploadPreset) {
     throw new Error(
       "Cloudinary env vars missing. Set CLOUDINARY_CLOUD_NAME and CLOUDINARY_UPLOAD_PRESET in .env.local"
     );
@@ -52,7 +69,7 @@ export async function uploadImage(
     formData.append("file", blob, "image.png");
   }
 
-  formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
+  formData.append("upload_preset", uploadPreset);
 
   if (options?.folder) {
     formData.append("folder", options.folder);
@@ -62,10 +79,13 @@ export async function uploadImage(
     formData.append("tags", options.tags.join(","));
   }
 
-  const response = await fetch(cloudinaryConfig.uploadUrl, {
-    method: "POST",
-    body: formData,
-  });
+  const response = await fetch(
+    `https://api.cloudinary.com/v1_2/${cloudName}/image/upload`,
+    {
+      method: "POST",
+      body: formData,
+    }
+  );
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({}));
@@ -90,12 +110,13 @@ export function getImageUrl(
     format?: string;
   }
 ): string {
-  if (!CLOUDINARY_CLOUD_NAME) {
+  const cloudName = getCloudName();
+  if (!cloudName) {
     return "";
   }
 
   const parts = [
-    `https://res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}/image/upload`,
+    `https://res.cloudinary.com/${cloudName}/image/upload`,
   ];
 
   if (options?.width || options?.height || options?.quality || options?.format) {

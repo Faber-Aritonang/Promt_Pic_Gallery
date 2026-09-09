@@ -130,7 +130,7 @@ export async function POST(request: Request): Promise<Response> {
       const userRef = db.collection("users").doc(user.uid);
       await userRef.update({
         "stats.total_versions_created":
-          (await userRef.get()).data()?.stats?.total_versions_created ?? 0 + 1,
+          ((await userRef.get()).data()?.stats?.total_versions_created ?? 0) + 1,
         updated_at: now,
       });
     } catch {
