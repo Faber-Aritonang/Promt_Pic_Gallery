@@ -14,6 +14,7 @@ import {
   type GLMMessage,
 } from "@/lib/services/glm";
 import { getTemplateById } from "@/lib/services/templates";
+import { enforceRateLimit, RATE_LIMITS } from "@/lib/utils/rate-limit";
 import type { ApiResponse } from "@/lib/types";
 
 // ── Request types ──────────────────────────────────────────────────────────
@@ -27,6 +28,10 @@ interface ChatRequestBody {
 // ── POST handler ───────────────────────────────────────────────────────────
 
 export async function POST(request: Request): Promise<Response> {
+  // Rate limit
+  const rateLimitError = enforceRateLimit(request, RATE_LIMITS.chat);
+  if (rateLimitError) return rateLimitError;
+
   try {
     const body = (await request.json()) as ChatRequestBody;
 

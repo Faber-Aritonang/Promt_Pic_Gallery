@@ -187,7 +187,7 @@ describe("generateWithHuggingFace", () => {
       ok: false,
       status: 503,
       headers: new Headers({ "content-type": "application/json" }),
-      json: () => Promise.resolve({ error: "Model is loading" }),
+      text: () => Promise.resolve(JSON.stringify({ error: "Model is loading" })),
     });
 
     await expect(

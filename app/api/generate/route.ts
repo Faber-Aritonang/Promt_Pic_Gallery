@@ -19,6 +19,7 @@ import {
 import { uploadImage } from "@/lib/cloudinary";
 import { getAdminDb } from "@/lib/firebase-admin";
 import { verifyAuthToken } from "@/lib/services/server-auth";
+import { enforceRateLimit, RATE_LIMITS } from "@/lib/utils/rate-limit";
 import type { ApiResponse } from "@/lib/types";
 
 interface GenerateRequest {
@@ -31,6 +32,10 @@ interface GenerateRequest {
 }
 
 export async function POST(request: NextRequest): Promise<Response> {
+  // Rate limit — image generation is expensive
+  const rateLimitError = enforceRateLimit(request, RATE_LIMITS.generate);
+  if (rateLimitError) return rateLimitError;
+
   try {
     let body: GenerateRequest;
     try {

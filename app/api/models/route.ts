@@ -33,13 +33,23 @@ export async function GET(): Promise<Response> {
     })),
   ];
 
+  // Pick default model based on what's configured
+  let defaultModel: string | null = null;
+  if (hfConfigured && imageModels.length > 0) {
+    defaultModel = imageModels[0].id;
+  } else if (replicateConfigured && replicateModels.length > 0) {
+    defaultModel = replicateModels[0].id;
+  } else if (allModels.length > 0) {
+    defaultModel = allModels[0].id;
+  }
+
   const body: ApiResponse = {
     success: true,
     data: {
       configured: hfConfigured || replicateConfigured,
       hf_configured: hfConfigured,
       replicate_configured: replicateConfigured,
-      default_model: imageModels[0]?.id ?? null,
+      default_model: defaultModel,
       models: allModels,
     },
   };

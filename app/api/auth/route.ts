@@ -4,6 +4,7 @@
 // POST { action: "logout" } — client-side sign-out (no-op on server)
 
 import { verifyAuthToken, getOrCreateUser } from "@/lib/services/server-auth";
+import { enforceRateLimit, RATE_LIMITS } from "@/lib/utils/rate-limit";
 import type { ApiResponse } from "@/lib/types";
 
 interface AuthRequestBody {
@@ -11,6 +12,10 @@ interface AuthRequestBody {
 }
 
 export async function POST(request: Request): Promise<Response> {
+  // Rate limit — protect against brute force
+  const rateLimitError = enforceRateLimit(request, RATE_LIMITS.auth);
+  if (rateLimitError) return rateLimitError;
+
   try {
     let body: AuthRequestBody;
     try {
