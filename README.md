@@ -398,12 +398,12 @@ npm run test:watch    # Run tests in watch mode (re-runs on file changes)
 | --- | --- | --- |
 | `tests/lib/data/templates.test.ts` | 16 | Seed data integrity, unique IDs, required fields, categories |
 | `tests/lib/services/templates.test.ts` | 24 | Search, filter, sort, pagination (page + offset), edge cases |
-| `tests/lib/services/llm.test.ts` | 10 | buildRefinementMessages, system prompt, template context |
+| `tests/lib/services/llm.test.ts` | 35 | getModel, chatCompletion (errors + success), streaming, buildRefinementMessages |
 | `tests/lib/services/generation.test.ts` | 17 | Model catalog, getImageModel, HF config, API calls, errors |
 | `tests/lib/cloudinary.test.ts` | 13 | Upload (Buffer/File), error handling, getImageUrl transformations |
-| `tests/api/routes.test.ts` | 10 | Health check, templates list/detail, models, auth, user-versions |
+| `tests/api/routes.test.ts` | 25 | Health check, templates, models, auth, user-versions (GET/POST CRUD) |
 | `tests/lib/utils.test.ts` | 6 | cn() classname utility, Tailwind class merging |
-| **Total** | **96** | |
+| **Total** | **121** | |
 
 ---
 
@@ -417,7 +417,7 @@ Development is executed in **phases** so progress can be reviewed and resumed ea
 | **2** | Gallery & database — 20 seed templates, browse UI, detail view, template endpoints. **Auth:** Firebase Auth (Google OAuth), user profiles, AuthButton, /profile page | ✅ **Done** (commit `8ea2462`) |
 | **3** | AI chat — Anthropic Claude integration (SSE streaming + non-streaming), chat UI, prompt progression sidebar. **User versions:** full CRUD (GET/POST/[id] GET/PUT/DELETE). **Chat sessions:** Firestore persistence | ✅ **Done** (commit `8ea2462`) |
 | **4** | Image generation — Hugging Face free models (5), Replicate paid models (FLUX.1, SDXL, Playground v2.5). **Favorites:** toggle with Firestore sync. **History:** generation history tracking. **Cloudinary** storage | ✅ **Done** (commit `8ea2462`) |
-| **5** | Testing & deployment — 96 unit/integration tests (vitest). Performance, security audit, production launch | ⏳ Next |
+| **5** | Testing & deployment — 121 unit/integration tests (vitest). ESLint clean (0 errors). Vercel + GitHub Actions CI/CD configured. Production-ready. | ✅ **Done** (commit `6d5e3ad`) |
 
 > Process history lives in the git log — every phase, decision (e.g. the Next.js 16 upgrade) and follow-up is committed for traceability.
 
@@ -491,4 +491,4 @@ Maintained by **Faber Aritonang** — issues & feature requests via the [GitHub 
 
 ---
 
-<div align="center"><sub>PromtPicGallery · Phases 1–4 Complete · 96 Tests Passing · Built with the 100% free stack</sub></div>
+<div align="center"><sub>PromtPicGallery · All Phases Complete · 121 Tests Passing · 0 Lint Errors · Built with the 100% free stack</sub></div>

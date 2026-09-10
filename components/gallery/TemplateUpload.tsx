@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
+import Image from "next/image";
 import { X, Upload, Image as ImageIcon, HardDrive } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,6 +45,7 @@ export function TemplateUpload({
   const [error, setError] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [uploadedId, setUploadedId] = useState<string | null>(null);
+  const [hasImage, setHasImage] = useState(false);
   // Initialize formData with prefill values
   const [formData, setFormData] = useState<{
     title: string;
@@ -76,7 +78,7 @@ export function TemplateUpload({
   };
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const hasImage = imageInputRef.current !== null;
+  const imageInputRef = useRef<File | null>(null);
 
   const handleImageSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -95,6 +97,7 @@ export function TemplateUpload({
     }
 
     imageInputRef.current = file;
+    setHasImage(true);
     setError(null);
 
     // Create preview URL
@@ -108,6 +111,7 @@ export function TemplateUpload({
     }
     setPreviewUrl(null);
     imageInputRef.current = null;
+    setHasImage(false);
     setError(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
@@ -194,7 +198,7 @@ export function TemplateUpload({
     } finally {
       setIsUploading(false);
     }
-  }, [imageInputRef, onUploadSuccess, handleRemoveImage]);
+  }, [onUploadSuccess, handleRemoveImage]);
 
   return (
     <Dialog open={isDialogOpen} onOpenChange={handleOpenChange}>
@@ -216,10 +220,12 @@ export function TemplateUpload({
 
             {previewUrl ? (
               <div className="relative aspect-[4/3] rounded-lg border overflow-hidden bg-muted">
-                <img
-                  src={previewUrl}
+                <Image
+                  src={previewUrl!}
                   alt="Preview"
-                  className="object-cover w-full h-full"
+                  fill
+                  className="object-cover"
+                  unoptimized
                 />
                 <button
                   type="button"

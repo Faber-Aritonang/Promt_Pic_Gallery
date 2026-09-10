@@ -43,7 +43,7 @@ function getApiKey(): string {
   return key;
 }
 
-function getModel(): string {
+export function getModel(): string {
   return process.env.LLM_MODEL || "claude-haiku-4-5-20250501";
 }
 
