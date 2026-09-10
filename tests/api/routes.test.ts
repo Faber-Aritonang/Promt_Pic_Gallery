@@ -395,6 +395,8 @@ describe("GET /api/user-versions — user versions", () => {
     vi.mocked(verifyAuthToken).mockResolvedValue({
       uid: "user-123",
       email: "test@example.com",
+      displayName: "Test User",
+      photoURL: "https://example.com/avatar.jpg",
     });
     
     const request = createRequest("http://localhost/api/user-versions");
@@ -414,6 +416,8 @@ describe("GET /api/user-versions — user versions", () => {
     vi.mocked(verifyAuthToken).mockResolvedValue({
       uid: "user-123",
       email: "test@example.com",
+      displayName: "Test User",
+      photoURL: "https://example.com/avatar.jpg",
     });
     
     const request = createRequest("http://localhost/api/user-versions");
@@ -451,6 +455,8 @@ describe("GET /api/user-versions — user versions", () => {
     vi.mocked(verifyAuthToken).mockResolvedValue({
       uid: "user-123",
       email: "test@example.com",
+      displayName: "Test User",
+      photoURL: "https://example.com/avatar.jpg",
     });
     
     const request = createRequest("http://localhost/api/user-versions");
@@ -478,6 +484,8 @@ describe("GET /api/user-versions — user versions", () => {
     vi.mocked(verifyAuthToken).mockResolvedValue({
       uid: "user-123",
       email: "test@example.com",
+      displayName: "Test User",
+      photoURL: "https://example.com/avatar.jpg",
     });
     
     const request = createRequest("http://localhost/api/user-versions?limit=3&offset=2");
@@ -502,6 +510,8 @@ describe("GET /api/user-versions — user versions", () => {
     vi.mocked(verifyAuthToken).mockResolvedValue({
       uid: "user-123",
       email: "test@example.com",
+      displayName: "Test User",
+      photoURL: "https://example.com/avatar.jpg",
     });
     
     const request = createRequest("http://localhost/api/user-versions");
@@ -538,6 +548,8 @@ describe("POST /api/user-versions — create version", () => {
     vi.mocked(verifyAuthToken).mockResolvedValue({
       uid: "user-123",
       email: "test@example.com",
+      displayName: "Test User",
+      photoURL: "https://example.com/avatar.jpg",
     });
     
     const request = createRequest("http://localhost/api/user-versions", {
@@ -557,6 +569,8 @@ describe("POST /api/user-versions — create version", () => {
     vi.mocked(verifyAuthToken).mockResolvedValue({
       uid: "user-123",
       email: "test@example.com",
+      displayName: "Test User",
+      photoURL: "https://example.com/avatar.jpg",
     });
     
     const request = new Request("http://localhost/api/user-versions", {
@@ -576,6 +590,8 @@ describe("POST /api/user-versions — create version", () => {
     vi.mocked(verifyAuthToken).mockResolvedValue({
       uid: "user-123",
       email: "test@example.com",
+      displayName: "Test User",
+      photoURL: "https://example.com/avatar.jpg",
     });
     
     const request = new Request("http://localhost/api/user-versions", {
@@ -597,6 +613,8 @@ describe("POST /api/user-versions — create version", () => {
     vi.mocked(verifyAuthToken).mockResolvedValue({
       uid: "user-123",
       email: "test@example.com",
+      displayName: "Test User",
+      photoURL: "https://example.com/avatar.jpg",
     });
     
     const request = new Request("http://localhost/api/user-versions", {
@@ -637,6 +655,8 @@ describe("POST /api/user-versions — create version", () => {
     vi.mocked(verifyAuthToken).mockResolvedValue({
       uid: "user-123",
       email: "test@example.com",
+      displayName: "Test User",
+      photoURL: "https://example.com/avatar.jpg",
     });
     
     const request = new Request("http://localhost/api/user-versions", {
@@ -664,6 +684,8 @@ describe("POST /api/user-versions — create version", () => {
     vi.mocked(verifyAuthToken).mockResolvedValue({
       uid: "user-123",
       email: "test@example.com",
+      displayName: "Test User",
+      photoURL: "https://example.com/avatar.jpg",
     });
     
     const request = new Request("http://localhost/api/user-versions", {
@@ -694,6 +716,8 @@ describe("POST /api/user-versions — create version", () => {
     vi.mocked(verifyAuthToken).mockResolvedValue({
       uid: "user-123",
       email: "test@example.com",
+      displayName: "Test User",
+      photoURL: "https://example.com/avatar.jpg",
     });
     
     const request = new Request("http://localhost/api/user-versions", {
@@ -714,6 +738,8 @@ describe("POST /api/user-versions — create version", () => {
     vi.mocked(verifyAuthToken).mockResolvedValue({
       uid: "user-123",
       email: "test@example.com",
+      displayName: "Test User",
+      photoURL: "https://example.com/avatar.jpg",
     });
     
     mockDb.collection = vi.fn().mockImplementation(() => ({

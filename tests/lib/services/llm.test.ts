@@ -99,15 +99,11 @@ describe("chatCompletion - API error handling", () => {
       text: vi.fn().mockResolvedValue("Invalid request body"),
     });
 
-    try {
-      await chatCompletion({
+    await expect(
+      chatCompletion({
         messages: [{ role: "user" as const, content: "Hello" }],
-      });
-      fail("Should have thrown");
-    } catch (error) {
-      expect(error).toBeInstanceOf(Error);
-      expect((error as Error).message).toContain("Invalid request body");
-    }
+      })
+    ).rejects.toThrow("Invalid request body");
   });
 });
 
@@ -522,7 +518,7 @@ describe("chatCompletionStream - streaming response", () => {
       messages: [{ role: "user" as const, content: "Hello" }],
     });
 
-    await expect(stream.next()).rejects.toThrow("Response body is not readable"); // @ts-expect-error - it rejects with a thrown error
+    await expect(stream.next()).rejects.toThrow("Response body is not readable");
   });
 
   it("throws error on API failure during streaming", async () => {
@@ -536,7 +532,7 @@ describe("chatCompletionStream - streaming response", () => {
       messages: [{ role: "user" as const, content: "Hello" }],
     });
 
-    await expect(stream.next()).rejects.toThrow("Anthropic API error (500)"); // @ts-expect-error - it rejects with a thrown error
+    await expect(stream.next()).rejects.toThrow("Anthropic API error (500)");
   });
 });
 
