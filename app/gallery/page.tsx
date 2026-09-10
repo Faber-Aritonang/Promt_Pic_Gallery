@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { ShellLayout } from "@/components/layouts/ShellLayout";
 import { GalleryFilters } from "@/components/gallery/GalleryFilters";
 import { GalleryGrid } from "@/components/gallery/GalleryGrid";
+import { TemplateUpload } from "@/components/gallery/TemplateUpload";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Template } from "@/lib/types";
 
@@ -92,16 +93,26 @@ function GalleryContent() {
       setLoading(true);
       setError(null);
 
+      console.log("[gallery] Fetching templates from:", buildFetchUrl(0));
+
       try {
         const [templatesRes, categoriesRes] = await Promise.all([
           fetch(buildFetchUrl(0)),
           fetch("/api/templates?categories=true"),
         ]);
 
+        console.log("[gallery] Templates response status:", templatesRes.status);
+
         if (cancelled) return;
 
         const templatesJson = await templatesRes.json();
         const categoriesJson = await categoriesRes.json();
+
+        console.log("[gallery] Templates data:", {
+          success: templatesJson.success,
+          total: templatesJson.data?.total,
+          templateCount: templatesJson.data?.templates?.length,
+        });
 
         if (cancelled) return;
 
@@ -189,12 +200,15 @@ function GalleryContent() {
         </div>
 
         <div className="mb-6">
-          <GalleryFilters
-            categories={categories}
-            currentSearch={q}
-            currentCategory={category}
-            currentSort={sort}
-          />
+          <div className="flex items-center justify-between">
+            <GalleryFilters
+              categories={categories}
+              currentSearch={q}
+              currentCategory={category}
+              currentSort={sort}
+            />
+            <TemplateUpload />
+          </div>
         </div>
 
         {!loading && (

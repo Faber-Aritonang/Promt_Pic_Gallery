@@ -1,77 +1,50 @@
-// GLM chat service — communicates with Zhipu AI's OpenAI-compatible API
-// for prompt refinement conversations.
+// LLM chat service — Anthropic Claude Messages API
+// Claude Haiku is used as the default low-latency model.
+// API docs: https://docs.anthropic.com/en/api/messages
 //
-// API docs: https://docs.z.ai/api-reference/llm/chat-completion
-// Uses the OpenAI-compatible v4 endpoint.
+// Pricing (Claude Haiku 4.5):
+//   Input:  $1 per million tokens
+//   Output: $5 per million tokens
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
-export interface GLMMessage {
+export interface LLMMessage {
   role: "system" | "user" | "assistant";
   content: string;
 }
 
-export interface GLMChatRequest {
-  messages: GLMMessage[];
-  /** Model to use (default: from env GLM_MODEL or glm-4.5-flash) */
+export interface LLMChatRequest {
+  messages: LLMMessage[];
   model?: string;
   temperature?: number;
   max_tokens?: number;
   stream?: boolean;
 }
 
-export interface GLMChatResponse {
+export interface LLMChatResponse {
   id: string;
   model: string;
-  choices: {
-    index: number;
-    message: {
-      role: "assistant";
-      content: string;
-    };
-    finish_reason: string;
-  }[];
+  content: { type: "text"; text: string }[];
   usage: {
-    prompt_tokens: number;
-    completion_tokens: number;
-    total_tokens: number;
+    input_tokens: number;
+    output_tokens: number;
   };
-}
-
-export interface GLMStreamChunk {
-  id: string;
-  model: string;
-  choices: {
-    index: number;
-    delta: {
-      role?: "assistant";
-      content?: string;
-    };
-    finish_reason: string | null;
-  }[];
 }
 
 // ── Configuration ──────────────────────────────────────────────────────────
 
 function getApiKey(): string {
-  const key = process.env.GLM_API_KEY;
-  if (!key || key === "your_glm_api_key") {
+  const key = process.env.ANTHROPIC_API_KEY;
+  if (!key || key === "your_anthropic_api_key") {
     throw new Error(
-      "GLM_API_KEY is not configured. Set it in .env.local (get a key at https://open.bigmodel.cn/)."
+      "ANTHROPIC_API_KEY is not configured. Set it in .env.local (get a key at https://console.anthropic.com/)."
     );
   }
   return key;
 }
 
-function getEndpoint(): string {
-  return (
-    process.env.GLM_API_ENDPOINT ||
-    "https://open.bigmodel.cn/api/paas/v4/chat/completions"
-  );
-}
-
 function getModel(): string {
-  return process.env.GLM_MODEL || "glm-4.5-flash";
+  return process.env.LLM_MODEL || "claude-haiku-4-5-20250501";
 }
 
 // ── System Prompt ──────────────────────────────────────────────────────────
@@ -108,24 +81,35 @@ For each turn, respond with:
 // ── Non-streaming call ─────────────────────────────────────────────────────
 
 export async function chatCompletion(
-  request: GLMChatRequest
-): Promise<GLMChatResponse> {
+  request: LLMChatRequest
+): Promise<LLMChatResponse> {
   const apiKey = getApiKey();
-  const endpoint = getEndpoint();
+  const model = request.model || getModel();
 
-  const body = {
-    model: request.model || getModel(),
-    messages: request.messages,
-    temperature: request.temperature ?? 0.7,
+  // Separate system message from conversation
+  const systemMsg = request.messages.find((m) => m.role === "system");
+  const conversationMsgs = request.messages.filter((m) => m.role !== "system");
+
+  const body: Record<string, unknown> = {
+    model,
     max_tokens: request.max_tokens ?? 2048,
-    stream: false,
+    messages: conversationMsgs,
   };
 
-  const response = await fetch(endpoint, {
+  if (systemMsg) {
+    body.system = systemMsg.content;
+  }
+
+  if (request.temperature !== undefined) {
+    body.temperature = request.temperature;
+  }
+
+  const response = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
     },
     body: JSON.stringify(body),
   });
@@ -133,11 +117,18 @@ export async function chatCompletion(
   if (!response.ok) {
     const errorText = await response.text();
     throw new Error(
-      `GLM API error (${response.status}): ${errorText.slice(0, 500)}`
+      `Anthropic API error (${response.status}): ${errorText.slice(0, 500)}`
     );
   }
 
-  return response.json() as Promise<GLMChatResponse>;
+  const data = await response.json();
+
+  return {
+    id: data.id,
+    model: data.model,
+    content: data.content,
+    usage: data.usage,
+  };
 }
 
 // ── Streaming call ─────────────────────────────────────────────────────────
@@ -147,24 +138,36 @@ export async function chatCompletion(
  * Uses Server-Sent Events (SSE) format.
  */
 export async function* chatCompletionStream(
-  request: GLMChatRequest
+  request: LLMChatRequest
 ): AsyncGenerator<string, void, unknown> {
   const apiKey = getApiKey();
-  const endpoint = getEndpoint();
+  const model = request.model || getModel();
 
-  const body = {
-    model: request.model || getModel(),
-    messages: request.messages,
-    temperature: request.temperature ?? 0.7,
+  // Separate system message from conversation
+  const systemMsg = request.messages.find((m) => m.role === "system");
+  const conversationMsgs = request.messages.filter((m) => m.role !== "system");
+
+  const body: Record<string, unknown> = {
+    model,
     max_tokens: request.max_tokens ?? 2048,
+    messages: conversationMsgs,
     stream: true,
   };
 
-  const response = await fetch(endpoint, {
+  if (systemMsg) {
+    body.system = systemMsg.content;
+  }
+
+  if (request.temperature !== undefined) {
+    body.temperature = request.temperature;
+  }
+
+  const response = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
     },
     body: JSON.stringify(body),
   });
@@ -172,7 +175,7 @@ export async function* chatCompletionStream(
   if (!response.ok) {
     const errorText = await response.text();
     throw new Error(
-      `GLM API error (${response.status}): ${errorText.slice(0, 500)}`
+      `Anthropic API error (${response.status}): ${errorText.slice(0, 500)}`
     );
   }
 
@@ -204,10 +207,13 @@ export async function* chatCompletionStream(
         if (data === "[DONE]") return;
 
         try {
-          const chunk = JSON.parse(data) as GLMStreamChunk;
-          const content = chunk.choices?.[0]?.delta?.content;
-          if (content) {
-            yield content;
+          const chunk = JSON.parse(data);
+          // Anthropic streaming: content_block_delta events
+          if (chunk.type === "content_block_delta") {
+            const text = chunk.delta?.text;
+            if (text) {
+              yield text;
+            }
           }
         } catch {
           // Skip malformed JSON chunks
@@ -233,14 +239,17 @@ export function buildRefinementMessages(
     description: string;
     style_tips?: string;
   }
-): GLMMessage[] {
-  const messages: GLMMessage[] = [];
+): LLMMessage[] {
+  const messages: LLMMessage[] = [];
 
   // System prompt with optional template context
   let systemContent = PROMPT_REFINEMENT_SYSTEM_PROMPT;
 
   if (templateContext) {
-    systemContent += `\n\n## Current Template Context\n- **Template:** ${templateContext.title}\n- **Original Prompt:** ${templateContext.original_prompt}\n- **Description:** ${templateContext.description}`;
+    systemContent += `\n\n## Current Template Context
+- **Template:** ${templateContext.title}
+- **Original Prompt:** ${templateContext.original_prompt}
+- **Description:** ${templateContext.description}`;
     if (templateContext.style_tips) {
       systemContent += `\n- **Style Tips:** ${templateContext.style_tips}`;
     }

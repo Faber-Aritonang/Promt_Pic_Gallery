@@ -31,7 +31,7 @@ export default function ChatError({
               <h1 className="text-xl font-bold">Chat Error</h1>
               <p className="mt-2 text-sm text-muted-foreground">
                 The AI chat encountered an error. This might be a temporary
-                issue with the GLM API.
+                issue with the Anthropic API.
               </p>
             </div>
 

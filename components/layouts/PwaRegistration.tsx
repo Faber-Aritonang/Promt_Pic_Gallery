@@ -4,6 +4,10 @@ import { useEffect } from "react";
 
 export function PwaRegistration() {
   useEffect(() => {
+    // Skip registration in development: the Next.js dev server already handles
+    // hot reloading, and a service worker here can cache and serve stale
+    // bundles that break the app after code changes.
+    if (process.env.NODE_ENV === "development") return;
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker
         .register("/sw.js")

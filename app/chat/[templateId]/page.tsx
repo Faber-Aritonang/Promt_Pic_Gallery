@@ -5,19 +5,12 @@ import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import type { Metadata } from "next";
 import type { Template } from "@/lib/types";
+import { getTemplateById } from "@/lib/services/templates";
 
+// Read directly from the server-side service instead of calling this app's API
+// over HTTP. This keeps template chat working on any local or Vercel port.
 async function getTemplate(id: string): Promise<Template | null> {
-  try {
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
-    const res = await fetch(`${baseUrl}/templates/${id}`, {
-      cache: "no-store",
-    });
-    const json = await res.json();
-    if (json.success) return json.data;
-    return null;
-  } catch {
-    return null;
-  }
+  return getTemplateById(id);
 }
 
 export async function generateMetadata({

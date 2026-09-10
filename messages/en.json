@@ -26,6 +26,7 @@
     "or": "or"
   },
   "nav": {
+    "home": "Home",
     "gallery": "Gallery",
     "chat": "AI Chat",
     "profile": "Profile",

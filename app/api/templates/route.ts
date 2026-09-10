@@ -28,6 +28,12 @@ export async function GET(
 
   const result = await listTemplates({ q, category, sort, page, limit });
 
+  console.log("[api/templates] List result:", {
+    total: result.total,
+    hasMore: result.hasMore,
+    templateIds: result.templates.map((t) => t.id),
+  });
+
   const body: ApiResponse = {
     success: true,
     data: result,

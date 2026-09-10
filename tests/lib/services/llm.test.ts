@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import {
   buildRefinementMessages,
   PROMPT_REFINEMENT_SYSTEM_PROMPT,
-} from "@/lib/services/glm";
+} from "@/lib/services/llm";
 
 // Mock fetch globally for API call tests
 const mockFetch = vi.fn();

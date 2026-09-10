@@ -20,7 +20,7 @@ const nextConfig: NextConfig = {
             // Fonts
             "font-src 'self' https://fonts.gstatic.com",
             // Connect (API calls)
-            "connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://api-inference.huggingface.co https://api.replicate.com",
+            "connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://api.anthropic.com https://api-inference.huggingface.co https://api.replicate.com https://res.cloudinary.com",
             // Frame (for Google OAuth popup)
             "frame-src 'self' https://*.firebaseapp.com https://accounts.google.com",
             // Media
@@ -70,6 +70,8 @@ const nextConfig: NextConfig = {
       // Replicate prediction outputs
       { protocol: "https", hostname: "*.replicate.delivery" },
       { protocol: "https", hostname: "replicate.delivery" },
+      // Google user content (profile images)
+      { protocol: "https", hostname: "lh3.googleusercontent.com" },
     ],
   },
 };

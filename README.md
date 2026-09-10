@@ -2,7 +2,7 @@
 
 # 🏙️ PromtPicGallery
 
-**A prompt template gallery for text-to-image AI — browse templates, refine prompts with an AI sparring partner (Zhipu GLM), and generate images with the model of your choice.**
+**A prompt template gallery for text-to-image AI — browse templates, refine prompts with an AI sparring partner (Anthropic Claude), and generate images with the model of your choice.**
 
 Next.js · TypeScript · Tailwind CSS · shadcn/ui · Firebase · 100% Free Stack
 
@@ -37,13 +37,13 @@ Next.js · TypeScript · Tailwind CSS · shadcn/ui · Firebase · 100% Free Stac
 **PromtPicGallery** is a free web platform that helps content creators, designers, and AI enthusiasts master **prompt engineering** for text-to-image generation. It provides:
 
 1. A browsable **repository of ready-to-use prompt templates** with preview images.
-2. An interactive **AI refinement chat** (Zhipu GLM, `glm-4.5-flash`) that improves prompts turn-by-turn with live streaming responses and a prompt-progression tracker.
+2. An interactive **AI refinement chat** (Anthropic Claude Haiku) that improves prompts turn-by-turn with live streaming responses and a prompt-progression tracker.
 3. A **multi-model selector** so the finished prompt can be sent to the user's preferred image generator — Hugging Face free models + Replicate paid models.
 4. **Save, share, and export** refined "user versions" of any template.
 5. **Favorites, history, and chat sessions** persisted to Firestore.
 6. **Google OAuth** sign-in with Firebase Auth.
 
-Full product specification: see `PRD_Prompt_Gallery_App.md` (referenced by section throughout this project, e.g. "PRD §4.1").
+Full product specification: see `PRD_Prompt_Gallery_App.md` (referenced by section throughout this project, e.g. "PRD §4.1"). The chat implementation uses Anthropic's Messages API; the old GLM references in the original PRD are historical only.
 
 ### Design Goals
 
@@ -64,7 +64,7 @@ Full product specification: see `PRD_Prompt_Gallery_App.md` (referenced by secti
 | --- | --- | --- |
 | 🖼️ Gallery browse (search, category filter, sort, infinite scroll) | **✅ Done** | 2 |
 | 🏗️ Template detail view (prompt, style tips, variations, copy) | **✅ Done** | 2 |
-| 💬 GLM chat refinement with live streaming + prompt progression | **✅ Done** | 3 |
+| 💬 Anthropic Claude chat refinement with live streaming + prompt progression | **✅ Done** | 3 |
 | 📝 Template seed data (20 templates across categories) | **✅ Done** | 2 |
 | 🎨 Image generation — Hugging Face free models (5 models) | **✅ Done** | 4 |
 | 🎨 Image generation — Replicate paid models (FLUX.1, SDXL, Playground) | **✅ Done** | 4 |
@@ -91,7 +91,7 @@ Full product specification: see `PRD_Prompt_Gallery_App.md` (referenced by secti
 | **Database** | Firebase Firestore | Templates, users, versions, sessions, favorites |
 | **Storage** | Cloudinary (25 GB free) | Generated + template images |
 | **Auth** | Firebase Auth / Google OAuth | User sign-in, ID token verification |
-| **LLM** | Zhipu GLM (`glm-4.5-flash`, OpenAI-compatible v4 API) | Prompt refinement assistant |
+| **LLM** | Anthropic Claude Haiku (Messages API) | Prompt refinement assistant |
 | **Image Gen** | Hugging Face Inference Providers + Replicate | Image generation (free + paid tiers) |
 | **Testing** | Vitest + jsdom + @testing-library | Unit & integration tests |
 | **Deployment** | Vercel (free tier) + GitHub Actions CI/CD | Production hosting |
@@ -117,10 +117,10 @@ The original spec targeted Next.js 14. This project was upgraded to **Next.js 16
 │    /api/auth · /api/user-versions · /api/chat-sessions            │
 │    /api/favorites · /api/history · /api/models                    │
 └──────┬──────────────┬──────────────────┬──────────────────────────┘
-       │ Firebase SDK │ GLM API          │ Image Gen APIs
+       │ Firebase SDK │ Anthropic API    │ Image Gen APIs
 ┌──────▼─────────┐ ┌──▼───────────┐ ┌───▼──────────────────────────┐
-│ Firestore +    │ │ Zhipu GLM    │ │ Hugging Face (free)          │
-│ Auth + Admin   │ │ glm-4.5-flash│ │ Replicate (FLUX, SDXL, ...) │
+│ Firestore +    │ │ Anthropic   │ │ Hugging Face (free)          │
+│ Auth + Admin   │ │ Claude Haiku│ │ Replicate (FLUX, SDXL, ...) │
 │ Cloudinary     │ │              │ │ Cloudinary (storage)         │
 └────────────────┘ └──────────────┘ └──────────────────────────────┘
 ```
@@ -146,7 +146,7 @@ The original spec targeted Next.js 14. This project was upgraded to **Next.js 16
 │   └── api/                      # Route Handlers (serverless)
 │       ├── route.ts              # GET /api → health check
 │       ├── templates/            # GET list + GET /:id
-│       ├── chat/                 # POST — GLM streaming/SSE + non-streaming
+│       ├── chat/                 # POST — Anthropic streaming/SSE + non-streaming
 │       ├── models/               # GET — supported image models (HF + Replicate)
 │       ├── generate/             # POST — HF/Replicate → Cloudinary
 │       ├── auth/                 # POST — me / register / logout
@@ -170,7 +170,7 @@ The original spec targeted Next.js 14. This project was upgraded to **Next.js 16
 │       ├── auth.ts               # Client-side auth (Google OAuth)
 │       ├── server-auth.ts        # Server-side auth (token verify, user CRUD)
 │       ├── templates.ts          # List/get/categories — Firestore w/ seed fallback
-│       ├── glm.ts                # GLM chat: streaming + non-streaming + system prompt
+│       ├── llm.ts                # Anthropic chat: streaming + non-streaming + system prompt
 │       ├── generation.ts         # Hugging Face Inference API + model catalog
 │       ├── replicate.ts          # Replicate API + model catalog
 │       └── chat-sessions.ts      # Chat session persistence
@@ -262,9 +262,8 @@ Copy `.env.example` → `.env.local`. All variables are required before enabling
 | `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID` | Firebase (client) | Firebase console → Web app |
 | `NEXT_PUBLIC_FIREBASE_APP_ID` | Firebase (client) | Firebase console → Web app |
 | `FIREBASE_SERVICE_ACCOUNT` | Firebase Admin (server) — user CRUD, sessions | Firebase console → Service accounts → Generate new private key |
-| `GLM_API_KEY` | GLM chat refinement | [open.bigmodel.cn](https://open.bigmodel.cn/) |
-| `GLM_API_ENDPOINT` | GLM chat refinement | Default endpoint in `.env.example` |
-| `GLM_MODEL` | GLM chat refinement | Default `glm-4.5-flash` |
+| `ANTHROPIC_API_KEY` | Anthropic Claude chat refinement | [console.anthropic.com](https://console.anthropic.com/) |
+| `LLM_MODEL` | Anthropic Claude model | Default `claude-haiku-4-5-20250501` |
 | `CLOUDINARY_CLOUD_NAME` | Cloudinary image storage | Cloudinary dashboard → Copy cloud name |
 | `CLOUDINARY_UPLOAD_PRESET` | Cloudinary image storage | Cloudinary Settings → Upload → Add upload preset |
 | `HUGGING_FACE_API_KEY` | Image generation (free tier) | [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens) |
@@ -273,7 +272,7 @@ Copy `.env.example` → `.env.local`. All variables are required before enabling
 | `NEXT_PUBLIC_SITE_URL` | Absolute URLs / OG tags | Default `http://localhost:3000` |
 | `ENVIRONMENT` | Runtime mode | `development` / `production` |
 
-> 🔒 `.env*.local` is git-ignored — never commit real keys. `.env.example` holds placeholders only.
+> 🔒 `.env*.local` is git-ignored — never commit real keys. `.env.example` holds placeholders only. If a key was exposed, revoke it in the provider dashboard and replace it in local/Vercel environments before redeploying.
 
 ---
 
@@ -292,7 +291,7 @@ Base URL: `/api` (local: `http://localhost:3000/api`). All responses follow the 
 | GET | `/api` | Health check / uptime probe | ❌ |
 | GET | `/api/templates` | List templates (`?q=` / `?category=` / `?sort=` / `?limit=` / `?offset=`, `?categories=true`) | ❌ |
 | GET | `/api/templates/:id` | Single template detail | ❌ |
-| POST | `/api/chat` | Send message → GLM refinement (`stream: true` = SSE, `templateId` optional) | ❌ |
+| POST | `/api/chat` | Send message → Anthropic Claude refinement (`stream: true` = SSE, `templateId` optional) | ❌ |
 | GET | `/api/models` | List supported image models (Hugging Face + Replicate) | ❌ |
 
 ### Authenticated Endpoints (require Bearer token)
@@ -399,7 +398,7 @@ npm run test:watch    # Run tests in watch mode (re-runs on file changes)
 | --- | --- | --- |
 | `tests/lib/data/templates.test.ts` | 16 | Seed data integrity, unique IDs, required fields, categories |
 | `tests/lib/services/templates.test.ts` | 24 | Search, filter, sort, pagination (page + offset), edge cases |
-| `tests/lib/services/glm.test.ts` | 10 | buildRefinementMessages, system prompt, template context |
+| `tests/lib/services/llm.test.ts` | 10 | buildRefinementMessages, system prompt, template context |
 | `tests/lib/services/generation.test.ts` | 17 | Model catalog, getImageModel, HF config, API calls, errors |
 | `tests/lib/cloudinary.test.ts` | 13 | Upload (Buffer/File), error handling, getImageUrl transformations |
 | `tests/api/routes.test.ts` | 10 | Health check, templates list/detail, models, auth, user-versions |
@@ -416,7 +415,7 @@ Development is executed in **phases** so progress can be reviewed and resumed ea
 | --- | --- | --- |
 | **1** | Foundation & setup — scaffold, design system, Firebase wiring, env, API skeleton, rules | ✅ **Done** (commit `70fbb50`) |
 | **2** | Gallery & database — 20 seed templates, browse UI, detail view, template endpoints. **Auth:** Firebase Auth (Google OAuth), user profiles, AuthButton, /profile page | ✅ **Done** (commit `8ea2462`) |
-| **3** | AI chat — GLM integration (SSE streaming + non-streaming), chat UI, prompt progression sidebar. **User versions:** full CRUD (GET/POST/[id] GET/PUT/DELETE). **Chat sessions:** Firestore persistence | ✅ **Done** (commit `8ea2462`) |
+| **3** | AI chat — Anthropic Claude integration (SSE streaming + non-streaming), chat UI, prompt progression sidebar. **User versions:** full CRUD (GET/POST/[id] GET/PUT/DELETE). **Chat sessions:** Firestore persistence | ✅ **Done** (commit `8ea2462`) |
 | **4** | Image generation — Hugging Face free models (5), Replicate paid models (FLUX.1, SDXL, Playground v2.5). **Favorites:** toggle with Firestore sync. **History:** generation history tracking. **Cloudinary** storage | ✅ **Done** (commit `8ea2462`) |
 | **5** | Testing & deployment — 96 unit/integration tests (vitest). Performance, security audit, production launch | ⏳ Next |
 

@@ -189,11 +189,46 @@ export async function getTemplateById(
 
 /**
  * Get available categories with template counts.
- * Uses seed data as the source of truth.
+ * Tries Firestore first, falls back to seed data.
  */
 export async function getCategories(): Promise<
   { id: string; label: string; count: number }[]
 > {
+  // Try Firestore first
+  try {
+    const db = getAdminDb();
+    const snapshot = await db.collection("templates").get();
+    if (!snapshot.empty) {
+      const templates = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      })) as Template[];
+      
+      const categoryMap = new Map<string, { label: string; count: number }>();
+
+      for (const t of templates) {
+        for (const cat of t.category) {
+          const existing = categoryMap.get(cat);
+          if (existing) {
+            existing.count++;
+          } else {
+            categoryMap.set(cat, {
+              label: cat.charAt(0).toUpperCase() + cat.slice(1),
+              count: 1,
+            });
+          }
+        }
+      }
+
+      return Array.from(categoryMap.entries())
+        .map(([id, { label, count }]) => ({ id, label, count }))
+        .sort((a, b) => b.count - a.count);
+    }
+  } catch (error) {
+    console.warn("[templates] Firestore unavailable for categories, using seed data:", error);
+  }
+
+  // Fall back to seed data
   const templates = seedTemplates;
   const categoryMap = new Map<string, { label: string; count: number }>();
 

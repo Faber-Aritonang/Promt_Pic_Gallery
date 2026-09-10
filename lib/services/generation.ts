@@ -16,6 +16,8 @@ export interface ImageModel {
   defaultHeight: number;
   /** Optional: specific HF Inference provider (e.g. "fal", "replicate", "hf-inference") */
   hfProvider?: string;
+  /** Whether the model currently works on the configured provider (false = hidden from UI). */
+  available?: boolean;
 }
 
 export interface GenerateImageResult {
@@ -45,7 +47,13 @@ export const imageModels: ImageModel[] = [
     free: true,
     defaultWidth: 1024,
     defaultHeight: 1024,
+    available: true,
   },
+  // The models below are NOT supported by the free `hf-inference` provider
+  // as of Sept 2026 (verified via the HF router API): SDXL is deprecated,
+  // the others return "Model not supported by provider hf-inference". They
+  // stay in the catalog for reference but are hidden from the UI via
+  // `available: false` and would need a paid provider (fal/replicate) to work.
   {
     id: "stabilityai/stable-diffusion-xl-base-1.0",
     name: "Stable Diffusion XL",
@@ -54,6 +62,7 @@ export const imageModels: ImageModel[] = [
     free: true,
     defaultWidth: 1024,
     defaultHeight: 1024,
+    available: false,
   },
   {
     id: "black-forest-labs/FLUX.1-schnell",
@@ -63,6 +72,7 @@ export const imageModels: ImageModel[] = [
     free: true,
     defaultWidth: 1024,
     defaultHeight: 1024,
+    available: false,
   },
   {
     id: "prompthero/openjourney-v4",
@@ -72,6 +82,7 @@ export const imageModels: ImageModel[] = [
     free: true,
     defaultWidth: 512,
     defaultHeight: 512,
+    available: false,
   },
   {
     id: "runwayml/stable-diffusion-v1-5",
@@ -81,6 +92,7 @@ export const imageModels: ImageModel[] = [
     free: true,
     defaultWidth: 512,
     defaultHeight: 512,
+    available: false,
   },
 ];
 
@@ -222,7 +234,10 @@ export async function generateWithHuggingFace(
     if (response.status === 404) {
       message += ` — Model "${model.id}" may not be available on the HF Inference provider. Try a different model.`;
     } else if (response.status === 401 || response.status === 403) {
-      message += " — Check that your HUGGING_FACE_API_KEY has 'Inference Providers' permission.";
+      message +=
+        " — Your HUGGING_FACE_API_KEY is missing the 'Inference Providers' permission. " +
+        "Create a new Fine-grained token at https://huggingface.co/settings/tokens " +
+        "with the 'Make calls to Inference Providers' permission enabled, then update .env.local and restart the server.";
     } else if (response.status === 503) {
       message += " — The model is currently loading. Try again in a few moments.";
     }

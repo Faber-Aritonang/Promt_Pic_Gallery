@@ -109,9 +109,16 @@ export async function generateWithReplicate(
 
   if (!createResponse.ok) {
     const error = await createResponse.json().catch(() => ({}));
-    throw new Error(
-      `Replicate API error (${createResponse.status}): ${error.detail ?? "Unknown error"}`
-    );
+    let message = `Replicate API error (${createResponse.status}): ${error.detail ?? "Unknown error"}`;
+    if (createResponse.status === 401) {
+      message +=
+        " — your REPLICATE_API_TOKEN was rejected. Generate a fresh token at " +
+        "https://replicate.com/account/api-tokens, update .env.local, and restart the server.";
+    } else if (createResponse.status === 402) {
+      message +=
+        " — add credit or activate the free trial at https://replicate.com/account/billing.";
+    }
+    throw new Error(message);
   }
 
   const prediction = (await createResponse.json()) as {

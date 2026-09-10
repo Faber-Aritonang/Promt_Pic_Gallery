@@ -1,5 +1,6 @@
 #!/bin/bash
 # Vercel Deployment Setup for PromtPicGallery
+# Chat provider: Anthropic Claude Messages API
 # Run this to deploy to Vercel
 
 set -e
@@ -37,9 +38,10 @@ echo "   vercel env add NEXT_PUBLIC_FIREBASE_APP_ID"
 echo "   vercel env add FIREBASE_SERVICE_ACCOUNT"
 echo "   vercel env add CLOUDINARY_CLOUD_NAME"
 echo "   vercel env add CLOUDINARY_UPLOAD_PRESET"
-echo "   vercel env add GLM_API_KEY"
-echo "   vercel env add GLM_API_ENDPOINT"
-echo "   vercel env add GLM_MODEL"
+echo "   vercel env add NEXT_PUBLIC_API_URL"
+echo "   vercel env add NEXT_PUBLIC_SITE_URL"
+echo "   vercel env add ANTHROPIC_API_KEY"
+echo "   vercel env add LLM_MODEL"
 echo "   vercel env add HUGGING_FACE_API_KEY"
 echo "   vercel env add REPLICATE_API_TOKEN"
 echo ""

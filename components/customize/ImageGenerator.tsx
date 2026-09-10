@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/select";
 import {
   AlertCircle,
+  Download,
   ExternalLink,
   Loader2,
   Sparkles,
@@ -32,6 +33,7 @@ interface ImageModel {
 
 interface GenerateResult {
   image_url: string;
+  public_id?: string;
   model_used: string;
   model_name: string;
   provider: string;
@@ -68,6 +70,8 @@ export function ImageGenerator({
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<GenerateResult | null>(null);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
 
   // Load available models on mount
   useEffect(() => {
@@ -102,8 +106,19 @@ export function ImageGenerator({
     setResult(null);
 
     try {
+      // Use selected model if available, otherwise use first configured model
+      let selectedModelId = selectedModel;
+      if (!selectedModelId && models.length > 0) {
+        selectedModelId = models[0].id;
+        setSelectedModel(selectedModelId);
+      }
+
+      if (!selectedModelId) {
+        throw new Error("No model available for generation");
+      }
+
       // Determine provider from selected model
-      const model = models.find((m) => m.id === selectedModel);
+      const model = models.find((m) => m.id === selectedModelId);
       const provider = model?.provider ?? "huggingface";
 
       const res = await fetch("/api/generate", {
@@ -111,7 +126,7 @@ export function ImageGenerator({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           prompt,
-          model: selectedModel,
+          model: selectedModelId,
           provider,
           templateId,
         }),
@@ -130,11 +145,52 @@ export function ImageGenerator({
     }
   }, [configured, prompt, selectedModel, models, templateId, isGenerating]);
 
+  const handleDownload = useCallback(async () => {
+    if (!result) return;
+
+    setIsDownloading(true);
+    setDownloadError(null);
+
+    try {
+      const response = await fetch(result.image_url);
+      if (!response.ok) throw new Error("Failed to fetch image");
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+
+      // Build a friendly filename from the Cloudinary public_id
+      const base =
+        result.public_id?.split("/").pop() ||
+        result.model_used.replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "");
+      const ext = (blob.type.split("/")[1] || "png").replace("jpeg", "jpg");
+
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${base}.${ext}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to download image";
+      setDownloadError(message);
+      // Fallback: open the image in a new tab so the user can save it manually
+      window.open(result.image_url, "_blank", "noopener,noreferrer");
+    } finally {
+      setIsDownloading(false);
+    }
+  }, [result]);
+
   const hasPrompt = prompt.trim().length > 0;
 
-  // Group models by provider
-  const hfModels = models.filter((m) => m.provider === "huggingface");
-  const replicateModelsList = models.filter((m) => m.provider === "replicate");
+  // Group models by provider, hiding models that are unavailable on their
+  // provider (e.g. deprecated / unsupported by the free HF inference tier).
+  const hfModels = models.filter(
+    (m) => m.provider === "huggingface" && m.available !== false
+  );
+  const replicateModelsList = models.filter(
+    (m) => m.provider === "replicate" && m.available !== false
+  );
 
   return (
     <div className="rounded-xl border bg-card p-3">
@@ -260,15 +316,34 @@ export function ImageGenerator({
               {result.model_name} · {result.provider} ·{" "}
               {(result.generation_time_ms / 1000).toFixed(1)}s ·{" "}
               {result.width}×{result.height}
-            </span>
-            <a
-              href={result.image_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1 text-primary hover:underline"
-            >
-              Open full size <ExternalLink className="h-3 w-3" />
-            </a>
+            </span>              <div className="flex items-center gap-3">
+              <button
+                onClick={handleDownload}
+                disabled={isDownloading}
+                className="flex items-center gap-1 text-primary hover:underline disabled:opacity-50"
+                title="Download image"
+              >
+                {isDownloading ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <Download className="h-3 w-3" />
+                )}
+                {isDownloading ? "Downloading..." : "Download"}
+              </button>
+              {downloadError && (
+                <span className="text-destructive text-[10px]">
+                  {downloadError}
+                </span>
+              )}
+              <a
+                href={result.image_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1 text-primary hover:underline"
+              >
+                Open full size <ExternalLink className="h-3 w-3" />
+              </a>
+            </div>
           </div>
         </div>
       )}

@@ -4,6 +4,7 @@ import { MessageBubble } from "./MessageBubble";
 import { ChatInput } from "./ChatInput";
 import { PromptSuggestions } from "./PromptSuggestions";
 import { ImageGenerator } from "./ImageGenerator";
+import { TemplateUpload } from "@/components/gallery/TemplateUpload";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -14,6 +15,7 @@ import {
   Copy,
   Check,
   RotateCcw,
+  Upload,
   Zap,
 } from "lucide-react";
 import { useState, useRef, useCallback, useEffect } from "react";
@@ -39,6 +41,8 @@ export function ChatInterface({ template }: ChatInterfaceProps) {
     template?.original_prompt || ""
   );
   const [finalPromptCopied, setFinalPromptCopied] = useState(false);
+  const [showUploadDialog, setShowUploadDialog] = useState(false);
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -81,6 +85,9 @@ export function ChatInterface({ template }: ChatInterfaceProps) {
           content: m.content,
         }));
 
+        const abortController = new AbortController();
+        abortControllerRef.current = abortController;
+
         const response = await fetch("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -89,7 +96,7 @@ export function ChatInterface({ template }: ChatInterfaceProps) {
             templateId: template?.id,
             stream: true,
           }),
-          signal: abortControllerRef.current?.signal,
+          signal: abortController.signal,
         });
 
         if (!response.ok) {
@@ -98,6 +105,9 @@ export function ChatInterface({ template }: ChatInterfaceProps) {
         }
 
         const reader = response.body?.getReader();
+        if (!reader) {
+          throw new Error("The chat response did not include a readable stream.");
+        }
         const decoder = new TextDecoder();
         let fullContent = "";
 
@@ -164,7 +174,7 @@ export function ChatInterface({ template }: ChatInterfaceProps) {
             m.id === aiMessageId
               ? {
                   ...m,
-                  content: `⚠️ Error: ${errorMsg}\n\nPlease check your GLM API key configuration and try again.`,
+                  content: `⚠️ Error: ${errorMsg}\n\nPlease check your Anthropic API key configuration and try again.`,
                 }
               : m
           )
@@ -231,6 +241,20 @@ export function ChatInterface({ template }: ChatInterfaceProps) {
               >
                 <RotateCcw className="mr-1 h-3 w-3" />
                 Reset
+              </Button>
+            )}
+            {currentPrompt && currentPrompt !== template?.original_prompt && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setShowUploadDialog(true);
+                  setUploadDialogOpen(true);
+                }}
+                className="gap-1.5 text-xs"
+              >
+                <Upload className="h-3 w-3" />
+                Save to Gallery
               </Button>
             )}
           </div>
@@ -357,6 +381,22 @@ export function ChatInterface({ template }: ChatInterfaceProps) {
           </div>
         </div>
       </div>
+
+      {/* Upload to Gallery Dialog */}
+      {showUploadDialog && (
+        <TemplateUpload
+          isOpen={uploadDialogOpen}
+          onOpenChange={setUploadDialogOpen}
+          onUploadSuccess={() => {
+            setShowUploadDialog(false);
+            setUploadDialogOpen(false);
+          }}
+          prefillPrompt={currentPrompt}
+          prefillTitle={template?.title || ""}
+          prefillDescription={template?.description || ""}
+          prefillGeneratedWith={template?.original_image_generated_with || ""}
+        />
+      )}
     </div>
   );
 }

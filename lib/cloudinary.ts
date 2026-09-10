@@ -21,7 +21,7 @@ export const cloudinaryConfig = {
     return getUploadPreset();
   },
   get uploadUrl() {
-    return `https://api.cloudinary.com/v1_2/${getCloudName()}/image/upload`;
+    return `https://api.cloudinary.com/v1_1/${getCloudName()}/image/upload`;
   },
 };
 
@@ -80,7 +80,7 @@ export async function uploadImage(
   }
 
   const response = await fetch(
-    `https://api.cloudinary.com/v1_2/${cloudName}/image/upload`,
+    `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
     {
       method: "POST",
       body: formData,
@@ -89,6 +89,18 @@ export async function uploadImage(
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({}));
+
+    // Cloudinary returns 404 with an HTML "Page not found" when the cloud
+    // name in the URL does not exist (or is mistyped).
+    if (response.status === 404) {
+      throw new Error(
+        `Cloudinary upload failed: 404 — the cloud name "${cloudName}" was not found. ` +
+          "Verify CLOUDINARY_CLOUD_NAME matches the \"Cloud name\" shown in your Cloudinary " +
+          "dashboard (https://console.cloudinary.com), and that the upload preset " +
+          `"${uploadPreset}" exists under Settings → Upload → Upload presets (Signing mode: Unsigned).`
+      );
+    }
+
     throw new Error(
       `Cloudinary upload failed: ${response.status} - ${error.error?.message || "Unknown error"}`
     );

@@ -1,94 +1,134 @@
 // Service Worker for PromtPicGallery PWA
-// Provides offline caching for static assets and API responses
+//
+// Strategy:
+//  - Development (localhost): the service worker only cleans up after itself.
+//    The Next.js dev server already handles hot reloading, and a stale SW here
+//    serves outdated HTML/JS bundles which breaks the app after code changes.
+//  - Production: offline support.
+//     * Navigations (pages): network-first — always serve fresh HTML, fall back
+//       to the cached copy only when offline.
+//     * Static assets (/ _next/static/...): cache-first — these URLs are
+//       content-hashed, so a cached entry is always the version the page asked
+//       for; revalidated in the background.
+//     * API calls: never intercepted.
 
-const CACHE_NAME = "promtpicgallery-v1";
-const STATIC_CACHE = "promtpic-static-v1";
-const DYNAMIC_CACHE = "promtpic-dynamic-v1";
+const IS_DEV = ["localhost", "127.0.0.1"].includes(self.location.hostname);
 
-// Assets to pre-cache on install
-const PRECACHE_ASSETS = [
-  "/",
-  "/gallery",
-  "/chat",
-  "/profile",
-  "/manifest.json",
-  "/favicon.ico",
-];
+const CACHE_NAME = "promtpicgallery-v2";
+const STATIC_CACHE = "promtpic-static-v2";
+const DYNAMIC_CACHE = "promtpic-dynamic-v2";
 
-// Install event — pre-cache critical assets
-self.addEventListener("install", (event) => {
-  event.waitUntil(
-    caches.open(STATIC_CACHE).then((cache) => {
-      return cache.addAll(PRECACHE_ASSETS);
-    })
-  );
-  self.skipWaiting();
-});
+// Non-navigation assets to pre-cache on install
+const PRECACHE_ASSETS = ["/manifest.json", "/favicon.ico"];
 
-// Activate event — clean up old caches
-self.addEventListener("activate", (event) => {
-  event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames
-          .filter((name) => name !== STATIC_CACHE && name !== DYNAMIC_CACHE)
-          .map((name) => caches.delete(name))
-      );
-    })
-  );
-  self.clients.claim();
-});
+if (IS_DEV) {
+  // Development: unregister and clear every cache so the app always runs
+  // against fresh code from the dev server.
+  self.addEventListener("install", () => {
+    self.skipWaiting();
+  });
 
-// Fetch event — serve from cache, fall back to network
-self.addEventListener("fetch", (event) => {
-  const { request } = event;
-  const url = new URL(request.url);
+  self.addEventListener("activate", (event) => {
+    event.waitUntil(
+      Promise.all([
+        self.registration.unregister(),
+        caches
+          .keys()
+          .then((cacheNames) =>
+            Promise.all(cacheNames.map((name) => caches.delete(name)))
+          ),
+      ])
+    );
+    self.clients.claim();
+  });
+} else {
+  // Install event — pre-cache critical assets
+  self.addEventListener("install", (event) => {
+    event.waitUntil(
+      caches.open(STATIC_CACHE).then((cache) => {
+        return cache.addAll(PRECACHE_ASSETS);
+      })
+    );
+    self.skipWaiting();
+  });
 
-  // Skip non-GET requests
-  if (request.method !== "GET") return;
+  // Activate event — clean up old caches
+  self.addEventListener("activate", (event) => {
+    event.waitUntil(
+      caches.keys().then((cacheNames) => {
+        return Promise.all(
+          cacheNames
+            .filter((name) => name !== STATIC_CACHE && name !== DYNAMIC_CACHE)
+            .map((name) => caches.delete(name))
+        );
+      })
+    );
+    self.clients.claim();
+  });
 
-  // Skip API calls (always go to network)
-  if (url.pathname.startsWith("/api/")) return;
+  // Fetch event — network-first for pages, cache-first for static assets
+  self.addEventListener("fetch", (event) => {
+    const { request } = event;
+    const url = new URL(request.url);
 
-  // Skip external resources (CDN images, etc.)
-  if (url.origin !== self.location.origin) return;
+    // Only handle same-origin GET requests
+    if (request.method !== "GET") return;
+    if (url.origin !== self.location.origin) return;
 
-  event.respondWith(
-    caches.match(request).then((cachedResponse) => {
-      if (cachedResponse) {
-        // Return cached version, but also fetch updated version in background
-        event.waitUntil(
-          fetch(request).then((networkResponse) => {
-            if (networkResponse.ok) {
+    // Never intercept API calls — always go to the network
+    if (url.pathname.startsWith("/api/")) return;
+
+    // Navigation requests: network-first
+    if (request.mode === "navigate") {
+      event.respondWith(
+        fetch(request)
+          .then((response) => {
+            if (response.ok) {
+              const clone = response.clone();
               caches.open(DYNAMIC_CACHE).then((cache) => {
-                cache.put(request, networkResponse.clone());
+                cache.put(request, clone);
               });
             }
-          }).catch(() => {
-            // Network failed, cached version is fine
+            return response;
           })
-        );
-        return cachedResponse;
-      }
+          .catch(() =>
+            caches.match(request).then((cached) => cached || caches.match("/"))
+          )
+      );
+      return;
+    }
 
-      // Not in cache — fetch from network and cache
-      return fetch(request)
-        .then((networkResponse) => {
+    // Static assets: cache-first with background revalidation
+    event.respondWith(
+      caches.match(request).then((cachedResponse) => {
+        // Revalidate in the background without blocking the response
+        event.waitUntil(
+          fetch(request)
+            .then((networkResponse) => {
+              if (networkResponse.ok) {
+                const clone = networkResponse.clone();
+                return caches
+                  .open(DYNAMIC_CACHE)
+                  .then((cache) => cache.put(request, clone));
+              }
+            })
+            .catch(() => {
+              // Network failed — cached copy is fine
+            })
+        );
+
+        if (cachedResponse) return cachedResponse;
+
+        return fetch(request).then((networkResponse) => {
           if (networkResponse.ok) {
-            const responseClone = networkResponse.clone();
+            const clone = networkResponse.clone();
             caches.open(DYNAMIC_CACHE).then((cache) => {
-              cache.put(request, responseClone);
+              cache.put(request, clone);
             });
           }
           return networkResponse;
-        })
-        .catch(() => {
-          // Offline and not cached — return offline page for navigation
-          if (request.mode === "navigate") {
-            return caches.match("/");
-          }
-          return new Response("Offline", { status: 503 });
         });
-    })
-  );
-});
+      })
+    );
+  });
+}

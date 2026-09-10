@@ -1,4 +1,4 @@
-// POST /api/chat — send a message to GLM for prompt refinement.
+// POST /api/chat — send a message to Anthropic Claude for prompt refinement.
 // Supports both streaming (SSE) and non-streaming responses.
 //
 // Request body:
@@ -11,8 +11,8 @@ import {
   chatCompletion,
   chatCompletionStream,
   buildRefinementMessages,
-  type GLMMessage,
-} from "@/lib/services/glm";
+  type LLMMessage,
+} from "@/lib/services/llm";
 import { getTemplateById } from "@/lib/services/templates";
 import { enforceRateLimit, RATE_LIMITS } from "@/lib/utils/rate-limit";
 import type { ApiResponse } from "@/lib/types";
@@ -64,7 +64,7 @@ export async function POST(request: Request): Promise<Response> {
     }
 
     // Build messages with system prompt
-    const messages: GLMMessage[] = buildRefinementMessages(
+    const messages: LLMMessage[] = buildRefinementMessages(
       body.messages,
       templateContext
     );
@@ -104,10 +104,13 @@ export async function POST(request: Request): Promise<Response> {
     // ── Non-streaming response ───────────────────────────────────────────
     const result = await chatCompletion({ messages });
 
-    const content = result.choices?.[0]?.message?.content;
+    const content = result.content
+      ?.filter((block) => block.type === "text")
+      .map((block) => block.text)
+      .join("");
     if (!content) {
       return Response.json(
-        { success: false, error: "No response from GLM API" } satisfies ApiResponse,
+        { success: false, error: "No response from LLM API" } satisfies ApiResponse,
         { status: 502 }
       );
     }

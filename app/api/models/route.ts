@@ -19,7 +19,9 @@ export async function GET(): Promise<Response> {
     ...imageModels.map((m) => ({
       ...m,
       provider: "huggingface" as const,
-      available: hfConfigured,
+      // Respect per-model availability (models unsupported by the current
+      // provider stay hidden), combined with the provider-level config.
+      available: hfConfigured && m.available !== false,
     })),
     ...replicateModels.map((m) => ({
       id: m.id,

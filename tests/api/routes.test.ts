@@ -13,7 +13,7 @@ vi.mock("@/lib/services/templates", () => ({
   getCategories: vi.fn(),
 }));
 
-vi.mock("@/lib/services/glm", () => ({
+vi.mock("@/lib/services/llm", () => ({
   chatCompletion: vi.fn(),
   chatCompletionStream: vi.fn(),
   buildRefinementMessages: vi.fn((history: unknown[]) => [
