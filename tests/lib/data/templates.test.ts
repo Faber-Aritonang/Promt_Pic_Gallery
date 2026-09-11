@@ -2,8 +2,8 @@ import { describe, it, expect } from "vitest";
 import { seedTemplates, categories } from "@/lib/data/templates";
 
 describe("seedTemplates", () => {
-  it("contains exactly 20 templates", () => {
-    expect(seedTemplates.length).toBe(20);
+  it("contains exactly 50 templates", () => {
+    expect(seedTemplates.length).toBe(50);
   });
 
   it("has unique IDs for all templates", () => {
@@ -87,8 +87,8 @@ describe("seedTemplates", () => {
     expect(seedTemplates[0].id).toBe("tpl-001");
   });
 
-  it("last template is tpl-020", () => {
-    expect(seedTemplates[19].id).toBe("tpl-020");
+  it("last template is tpl-050", () => {
+    expect(seedTemplates[49].id).toBe("tpl-050");
   });
 });
 
@@ -119,7 +119,7 @@ describe("categories (computed)", () => {
 
   it("total category counts add up correctly", () => {
     const total = categories.reduce((sum, c) => sum + c.count, 0);
-    // Each template has at least one category, so total >= 20
-    expect(total).toBeGreaterThanOrEqual(20);
+    // Each template has at least one category, so total >= 50
+    expect(total).toBeGreaterThanOrEqual(50);
   });
 });

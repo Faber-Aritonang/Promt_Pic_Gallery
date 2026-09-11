@@ -58,7 +58,7 @@ import { seedTemplates } from "@/lib/data/templates";
 
 describe("listTemplates with Firestore configured", () => {
   it("lists stored templates next to the seed templates", async () => {
-    const result = await listTemplates({ limit: 50 });
+    const result = await listTemplates({ limit: 100 });
     const ids = result.templates.map((t) => t.id);
 
     // The uploaded template is listed...
@@ -74,7 +74,7 @@ describe("listTemplates with Firestore configured", () => {
       data: () => storedDoc({ title: "Stored Cyberpunk" }),
     });
 
-    const result = await listTemplates({ limit: 50 });
+    const result = await listTemplates({ limit: 100 });
     const matches = result.templates.filter((t) => t.id === "tpl-001");
 
     expect(matches).toHaveLength(1);

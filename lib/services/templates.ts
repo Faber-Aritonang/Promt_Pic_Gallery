@@ -83,7 +83,7 @@ function filterAndSort(
   }
 
   const total = result.length;
-  const limit = Math.min(50, Math.max(1, params.limit ?? 12));
+  const limit = Math.min(200, Math.max(1, params.limit ?? 12));
 
   // Support both page-based and offset-based pagination
   let start: number;

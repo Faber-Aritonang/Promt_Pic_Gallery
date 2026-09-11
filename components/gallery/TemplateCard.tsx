@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Star, Eye, Zap } from "lucide-react";
+import { Star, Eye, Zap, ImageIcon } from "lucide-react";
 import type { Template } from "@/lib/types";
 
 interface TemplateCardProps {
@@ -18,19 +19,28 @@ export function TemplateCard({ template }: TemplateCardProps) {
     advanced: "bg-destructive/10 text-destructive",
   };
 
+  const [imgError, setImgError] = useState(false);
+
   return (
     <Link href={`/gallery/${template.id}`}>
       <Card className="group overflow-hidden transition-all hover:ring-1 hover:ring-primary/50 hover:shadow-lg">
         {/* Thumbnail */}
         <div className="relative aspect-[4/3] overflow-hidden bg-muted">
-          <Image
-            src={template.original_image_url}
-            alt={template.title}
-            fill
-            className="object-cover transition-transform group-hover:scale-105"
-            loading="lazy"
-            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-          />
+          {imgError ? (
+            <div className="flex h-full w-full items-center justify-center bg-muted">
+              <ImageIcon className="h-12 w-12 text-muted-foreground/40" />
+            </div>
+          ) : (
+            <Image
+              src={template.original_image_url}
+              alt={template.title}
+              fill
+              className="object-cover transition-transform group-hover:scale-105"
+              loading="lazy"
+              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+              onError={() => setImgError(true)}
+            />
+          )}
           {/* Difficulty badge */}
           <Badge
             variant="secondary"

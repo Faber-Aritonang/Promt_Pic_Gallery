@@ -19,17 +19,21 @@ describe("listTemplates", () => {
     expect(result.page).toBe(1);
   });
 
-  it("returns all 20 seed templates with no filters", async () => {
+  it("returns all 50 seed templates with no filters", async () => {
     const result = await listTemplates({});
-    expect(result.total).toBe(20);
+    expect(result.total).toBe(50);
   });
 
-  it("searches by title", async () => {
+  it("searches by title or tags or description", async () => {
     const result = await listTemplates({ q: "Cyberpunk" });
     expect(result.templates.length).toBeGreaterThanOrEqual(2);
+    // Search matches across title, tags, description, and prompt
     expect(
       result.templates.every((t) =>
-        t.title.toLowerCase().includes("cyberpunk")
+        t.title.toLowerCase().includes("cyberpunk") ||
+        t.tags.some((tag) => tag.toLowerCase().includes("cyberpunk")) ||
+        t.description.toLowerCase().includes("cyberpunk") ||
+        t.original_prompt.toLowerCase().includes("cyberpunk")
       )
     ).toBe(true);
   });
@@ -139,8 +143,8 @@ describe("listTemplates", () => {
     const result1 = await listTemplates({ limit: 0 });
     expect(result1.limit).toBe(1);
 
-    const result2 = await listTemplates({ limit: 100 });
-    expect(result2.limit).toBe(50);
+    const result2 = await listTemplates({ limit: 300 });
+    expect(result2.limit).toBe(200);
   });
 
   it("handles combined search + category + sort", async () => {
