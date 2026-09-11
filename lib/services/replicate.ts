@@ -59,6 +59,15 @@ export const replicateModels: ReplicateModel[] = [
 
 // ── Configuration ──────────────────────────────────────────────────────────
 
+// Kept below the /api/generate route's `maxDuration` (60s) so that a slow
+// prediction produces a readable JSON error rather than the platform cutting
+// the invocation off (which reaches the browser as an empty response body).
+const POLL_TIMEOUT_MS = 45_000;
+const POLL_INTERVAL_MS = 1_500;
+// Replicate intermittently answers 429/5xx while a prediction runs; do not
+// throw away a finished prediction because of a single bad poll.
+const MAX_TRANSIENT_POLL_FAILURES = 5;
+
 export function isReplicateConfigured(): boolean {
   const token = process.env.REPLICATE_API_TOKEN;
   return Boolean(token && token.length > 0 && token !== "your_replicate_api_token");
@@ -103,7 +112,7 @@ export async function generateWithReplicate(
           height: options?.height ?? model.defaultHeight,
         },
       }),
-      signal: AbortSignal.timeout(options?.timeoutMs ?? 120_000),
+      signal: AbortSignal.timeout(options?.timeoutMs ?? 20_000),
     }
   );
 
@@ -133,19 +142,44 @@ export async function generateWithReplicate(
     throw new Error("Replicate: no poll URL returned");
   }
 
-  const maxAttempts = 60;
-  const pollInterval = 2000;
+  const deadline = Date.now() + POLL_TIMEOUT_MS;
+  let transientFailures = 0;
+  let lastTransientError = "";
 
-  for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    await new Promise((resolve) => setTimeout(resolve, pollInterval));
+  while (Date.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
 
-    const pollResponse = await fetch(pollUrl, {
-      headers: { Authorization: `Bearer ${apiToken}` },
-    });
+    let pollResponse: Response;
+    try {
+      pollResponse = await fetch(pollUrl, {
+        headers: { Authorization: `Bearer ${apiToken}` },
+        signal: AbortSignal.timeout(10_000),
+      });
+    } catch (error) {
+      // Network hiccup while polling — retry until the deadline.
+      transientFailures++;
+      lastTransientError = error instanceof Error ? error.message : String(error);
+      if (transientFailures > MAX_TRANSIENT_POLL_FAILURES) {
+        throw new Error(`Replicate poll failed repeatedly: ${lastTransientError}`);
+      }
+      continue;
+    }
 
     if (!pollResponse.ok) {
+      // 429/5xx are usually transient; a 4xx means the request itself is wrong.
+      if (pollResponse.status >= 500 || pollResponse.status === 429) {
+        transientFailures++;
+        lastTransientError = `HTTP ${pollResponse.status}`;
+        if (transientFailures > MAX_TRANSIENT_POLL_FAILURES) {
+          throw new Error(
+            `Replicate is unavailable right now (HTTP ${pollResponse.status} on ${transientFailures} consecutive polls). Try again in a moment.`
+          );
+        }
+        continue;
+      }
       throw new Error(`Replicate poll error (${pollResponse.status})`);
     }
+    transientFailures = 0;
 
     const status = (await pollResponse.json()) as {
       status: string;
@@ -189,5 +223,9 @@ export async function generateWithReplicate(
     // Still processing, continue polling
   }
 
-  throw new Error("Replicate: prediction timed out");
+  throw new Error(
+    `Replicate did not finish within ${Math.round(
+      POLL_TIMEOUT_MS / 1000
+    )}s. Press Generate again to keep going.`
+  );
 }
