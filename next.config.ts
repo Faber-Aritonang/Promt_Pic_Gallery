@@ -2,6 +2,11 @@ import type { NextConfig } from "next";
 import createNextIntlPlugin from "next-intl/plugin";
 
 const nextConfig: NextConfig = {
+  // firebase-admin (and its gRPC/google-gax dependency tree) must stay outside
+  // the server bundle: bundling it produces a build that loads fine locally but
+  // throws at module load in the Vercel function, which surfaces as an empty
+  // 500 from every API route that touches Firestore.
+  serverExternalPackages: ["firebase-admin"],
   headers: async () => [
     {
       source: "/(.*)",

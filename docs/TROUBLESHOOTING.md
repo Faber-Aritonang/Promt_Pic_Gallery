@@ -55,6 +55,19 @@ So the message never came from Anthropic and it is **not** an API-key problem: a
 3. **Retry in the browser** — the assistant bubble now prints the real `HTTP <status>` (and the server's message when there is one) instead of a JSON parse error.
 4. **Deployment Protection** — if Vercel Authentication is enabled, requests without a Vercel session get `401 {"error":{"code":"401","message":"Protected deployment"}}`. Tools like `curl`, Postman, or any external client cannot reach the app until it is disabled for that environment (Settings → Deployment Protection).
 
+---
+
+## Firestore-backed routes 500 on the deployed app
+
+`/gallery/[id]`, `/chat/[templateId]`, `/api/templates`, `/api/templates/[id]` all return **500** on Vercel while `npm run dev` / `npm start` work. Same root cause as above, one layer deeper: they are the routes that import `firebase-admin`.
+
+| # | Cause | Fix |
+| --- | --- | --- |
+| 7 | `firebase-admin` (with its gRPC / `google-gax` tree) was bundled into the server build. That build loads fine locally but throws at module load inside the Vercel function, so the route dies before its own error handling runs. | `serverExternalPackages: ["firebase-admin"]` in `next.config.ts`. |
+| 8 | When `FIREBASE_SERVICE_ACCOUNT` was present but rejected (e.g. a private key copied with escaped `\n`, or truncated), the code silently fell back to Application Default Credentials — which makes the function wait on an unreachable metadata server until the platform kills the request (the browser sees an empty 500). | `lib/firebase-admin.ts` now parses the key defensively (`\n` → newline) and **fails fast** with a clear message instead of falling back to ADC, so the seed-data fallbacks in `lib/services/*` keep the pages working. |
+
+Check `POST /api/chat`'s diagnostics or the deployed logs for `[firebase-admin] FIREBASE_SERVICE_ACCOUNT is set but unusable` — that means Firestore is disabled and the app is serving seed data. Re-paste the **entire** service-account JSON (Firebase console → Project settings → Service accounts → Generate new private key) to restore Firestore.
+
 ### Verifying locally before redeploying
 
 ```bash

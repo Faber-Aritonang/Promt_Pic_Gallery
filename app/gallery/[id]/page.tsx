@@ -3,7 +3,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Star, Eye, Zap, Copy, ArrowLeft, Lightbulb, Sparkles } from "lucide-react";
+import { CopyPromptButton } from "@/components/gallery/CopyPromptButton";
+import { Star, Eye, Zap, ArrowLeft, Lightbulb, Sparkles } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import type { Metadata } from "next";
@@ -142,16 +143,7 @@ export default async function TemplateDetailPage({
                 {template.original_prompt}
               </div>
               <div className="mt-3 flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    navigator.clipboard.writeText(template.original_prompt);
-                  }}
-                >
-                  <Copy className="mr-2 h-3 w-3" />
-                  Copy Prompt
-                </Button>
+                <CopyPromptButton prompt={template.original_prompt} />
                 <Button size="sm" asChild>
                   <Link href={`/chat/${template.id}`}>
                     <Sparkles className="mr-2 h-3 w-3" />
