@@ -17,6 +17,14 @@ import { getTemplateById } from "@/lib/services/templates";
 import { enforceRateLimit, RATE_LIMITS } from "@/lib/utils/rate-limit";
 import type { ApiResponse } from "@/lib/types";
 
+// Route segment config.
+// This handler streams an LLM completion, so on Vercel it must run on the
+// Node.js runtime and be allowed more than the platform's default function
+// duration — when an invocation is cut off the caller receives an empty error
+// response (which surfaces as "Unexpected end of JSON input" in the client).
+export const runtime = "nodejs";
+export const maxDuration = 60;
+
 // ── Request types ──────────────────────────────────────────────────────────
 
 interface ChatRequestBody {
@@ -28,11 +36,13 @@ interface ChatRequestBody {
 // ── POST handler ───────────────────────────────────────────────────────────
 
 export async function POST(request: Request): Promise<Response> {
-  // Rate limit
-  const rateLimitError = enforceRateLimit(request, RATE_LIMITS.chat);
-  if (rateLimitError) return rateLimitError;
-
   try {
+    // Rate limit — kept inside the try so an unexpected failure here still
+    // returns a JSON error body instead of an empty 500 response (an empty
+    // body is unparseable for clients and hides the real cause).
+    const rateLimitError = enforceRateLimit(request, RATE_LIMITS.chat);
+    if (rateLimitError) return rateLimitError;
+
     const body = (await request.json()) as ChatRequestBody;
 
     // Validate
@@ -92,11 +102,12 @@ export async function POST(request: Request): Promise<Response> {
         },
       });
 
+      // No `Connection` header: it is hop-by-hop and managed by the platform.
+      // Setting it from a serverless function can break the streamed response.
       return new Response(stream, {
         headers: {
           "Content-Type": "text/event-stream",
           "Cache-Control": "no-cache",
-          Connection: "keep-alive",
         },
       });
     }

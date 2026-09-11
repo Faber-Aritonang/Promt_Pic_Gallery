@@ -22,7 +22,7 @@ beforeEach(() => {
 describe("getModel", () => {
   it("returns default model when LLM_MODEL is not set", () => {
     delete process.env.LLM_MODEL;
-    expect(getModel()).toBe("claude-haiku-4-5-20250501");
+    expect(getModel()).toBe("claude-haiku-4-5");
   });
 
   it("returns custom model when LLM_MODEL is set", () => {

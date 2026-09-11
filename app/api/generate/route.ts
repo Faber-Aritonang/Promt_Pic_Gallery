@@ -22,6 +22,12 @@ import { verifyAuthToken } from "@/lib/services/server-auth";
 import { enforceRateLimit, RATE_LIMITS } from "@/lib/utils/rate-limit";
 import type { ApiResponse } from "@/lib/types";
 
+// Route segment config — image generation regularly takes longer than the
+// platform's default function duration, and a cut-off invocation reaches the
+// client as an empty error response.
+export const runtime = "nodejs";
+export const maxDuration = 60;
+
 interface GenerateRequest {
   prompt?: string;
   model?: string;

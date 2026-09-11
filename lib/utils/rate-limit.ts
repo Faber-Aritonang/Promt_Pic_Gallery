@@ -8,15 +8,23 @@ interface RateLimitEntry {
 
 const store = new Map<string, RateLimitEntry>();
 
-// Clean up expired entries every 5 minutes
-setInterval(() => {
-  const now = Date.now();
+// Expired entries are swept lazily on request instead of with a module-scope
+// setInterval(). A long-lived timer keeps the Node.js event loop alive, which
+// prevents serverless platforms (Vercel) from closing the invocation: the
+// function runs until the platform timeout and the client receives an empty
+// error response instead of the API reply.
+const CLEANUP_INTERVAL_MS = 5 * 60 * 1000;
+let lastCleanupAt = 0;
+
+function cleanupExpiredEntries(now: number): void {
+  if (now - lastCleanupAt < CLEANUP_INTERVAL_MS) return;
+  lastCleanupAt = now;
   for (const [key, entry] of store) {
     if (now > entry.resetAt) {
       store.delete(key);
     }
   }
-}, 5 * 60 * 1000);
+}
 
 export interface RateLimitConfig {
   /** Maximum requests per window */
@@ -39,6 +47,8 @@ export function checkRateLimit(
   config: RateLimitConfig
 ): RateLimitResult {
   const now = Date.now();
+  cleanupExpiredEntries(now);
+
   const entry = store.get(key);
 
   if (!entry || now > entry.resetAt) {

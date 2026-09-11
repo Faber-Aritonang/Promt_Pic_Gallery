@@ -26,6 +26,7 @@ Next.js · TypeScript · Tailwind CSS · shadcn/ui · Firebase · 100% Free Stac
 - [Testing](#-testing)
 - [Roadmap](#-roadmap)
 - [Deployment](#-deployment)
+- [Troubleshooting](#-troubleshooting)
 - [Versioning & Process Tracking](#-versioning--process-tracking)
 - [Glossary](#-glossary)
 - [Contact](#-contact)
@@ -263,7 +264,7 @@ Copy `.env.example` → `.env.local`. All variables are required before enabling
 | `NEXT_PUBLIC_FIREBASE_APP_ID` | Firebase (client) | Firebase console → Web app |
 | `FIREBASE_SERVICE_ACCOUNT` | Firebase Admin (server) — user CRUD, sessions | Firebase console → Service accounts → Generate new private key |
 | `ANTHROPIC_API_KEY` | Anthropic Claude chat refinement | [console.anthropic.com](https://console.anthropic.com/) |
-| `LLM_MODEL` | Anthropic Claude model | Default `claude-haiku-4-5-20250501` |
+| `LLM_MODEL` | Anthropic Claude model | Default `claude-haiku-4-5` |
 | `CLOUDINARY_CLOUD_NAME` | Cloudinary image storage | Cloudinary dashboard → Copy cloud name |
 | `CLOUDINARY_UPLOAD_PRESET` | Cloudinary image storage | Cloudinary Settings → Upload → Add upload preset |
 | `HUGGING_FACE_API_KEY` | Image generation (free tier) | [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens) |
@@ -457,6 +458,12 @@ npx vercel link           # once — creates .vercel/project.json (git-ignored)
 cp .env.example .env.local
 npx vercel dev            # local dev with env from Vercel
 ```
+
+---
+
+## 🔧 Troubleshooting
+
+Production-only failures (works with `npm run dev`, fails on Vercel) are documented in **[`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md)** — symptom, root cause, fix, and the Vercel checks to run when it happens again. Short version: check the **Logs** tab for the failing request, and make sure `ANTHROPIC_API_KEY` + `LLM_MODEL` are set for the environment you deployed.
 
 ---
 

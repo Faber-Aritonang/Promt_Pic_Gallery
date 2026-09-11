@@ -44,7 +44,7 @@ function getApiKey(): string {
 }
 
 export function getModel(): string {
-  return process.env.LLM_MODEL || "claude-haiku-4-5-20250501";
+  return process.env.LLM_MODEL || "claude-haiku-4-5";
 }
 
 // ── System Prompt ──────────────────────────────────────────────────────────

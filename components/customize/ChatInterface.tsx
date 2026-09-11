@@ -34,6 +34,154 @@ interface ChatInterfaceProps {
   template?: Template | null;
 }
 
+interface ApiMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
+/** HTTP failure from /api/chat, carrying the status code when there was one. */
+class ChatRequestError extends Error {
+  status?: number;
+
+  constructor(message: string, status?: number) {
+    super(message);
+    this.name = "ChatRequestError";
+    this.status = status;
+  }
+}
+
+/**
+ * Turn a non-OK /api/chat response into an error.
+ * The body is not guaranteed to be JSON: platform-level failures (function
+ * timeout, crash) come back with an empty body, so read it as text.
+ */
+async function chatRequestError(response: Response): Promise<ChatRequestError> {
+  const status = response.status;
+  const rawBody = await response.text();
+
+  if (!rawBody) {
+    return new ChatRequestError(
+      `Request failed with HTTP ${status}${
+        response.statusText ? ` ${response.statusText}` : ""
+      } (empty response body)`,
+      status
+    );
+  }
+
+  try {
+    const parsed = JSON.parse(rawBody) as { error?: unknown };
+    return new ChatRequestError(
+      typeof parsed.error === "string" ? parsed.error : rawBody,
+      status
+    );
+  } catch {
+    return new ChatRequestError(rawBody, status);
+  }
+}
+
+/**
+ * Stream a refinement answer (SSE) and return the assembled text.
+ * `onChunk` receives the text accumulated so far so the bubble updates live.
+ */
+async function requestChatStream(
+  messages: ApiMessage[],
+  templateId: string | undefined,
+  signal: AbortSignal,
+  onChunk: (fullText: string) => void
+): Promise<string> {
+  const response = await fetch("/api/chat", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ messages, templateId, stream: true }),
+    signal,
+  });
+
+  if (!response.ok) throw await chatRequestError(response);
+
+  const reader = response.body?.getReader();
+  if (!reader) {
+    throw new ChatRequestError(
+      "The chat response did not include a readable stream."
+    );
+  }
+
+  const decoder = new TextDecoder();
+  let fullContent = "";
+  let buffer = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split("\n");
+    buffer = lines.pop() || "";
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed || !trimmed.startsWith("data:")) continue;
+
+      const data = trimmed.slice(5).trim();
+      if (data === "[DONE]") return fullContent;
+
+      try {
+        const parsed = JSON.parse(data) as {
+          content?: string;
+          error?: string;
+        };
+        if (parsed.error) throw new Error(parsed.error);
+        if (parsed.content) {
+          fullContent += parsed.content;
+          onChunk(fullContent);
+        }
+      } catch (e) {
+        // Skip malformed SSE frames, but propagate real API errors.
+        if (
+          e instanceof Error &&
+          e.message !== "Unexpected end of JSON input"
+        ) {
+          throw e;
+        }
+      }
+    }
+  }
+
+  return fullContent;
+}
+
+/**
+ * Non-streaming fallback — a single JSON response instead of an SSE stream.
+ * Used when the streamed request fails before delivering any content.
+ */
+async function requestChatOnce(
+  messages: ApiMessage[],
+  templateId: string | undefined,
+  signal: AbortSignal
+): Promise<string> {
+  const response = await fetch("/api/chat", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ messages, templateId, stream: false }),
+    signal,
+  });
+
+  if (!response.ok) throw await chatRequestError(response);
+
+  const payload = (await response.json()) as {
+    data?: { content?: string };
+    error?: string;
+  };
+
+  const content = payload.data?.content;
+  if (!content) {
+    throw new ChatRequestError(
+      payload.error || "The chat API returned an empty response."
+    );
+  }
+
+  return content;
+}
+
 export function ChatInterface({ template }: ChatInterfaceProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
@@ -88,69 +236,45 @@ export function ChatInterface({ template }: ChatInterfaceProps) {
         const abortController = new AbortController();
         abortControllerRef.current = abortController;
 
-        const response = await fetch("/api/chat", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            messages: apiMessages,
-            templateId: template?.id,
-            stream: true,
-          }),
-          signal: abortController.signal,
-        });
+        const updateAiMessage = (text: string) =>
+          setMessages((prev) =>
+            prev.map((m) => (m.id === aiMessageId ? { ...m, content: text } : m))
+          );
 
-        if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.error || "Failed to get response");
-        }
-
-        const reader = response.body?.getReader();
-        if (!reader) {
-          throw new Error("The chat response did not include a readable stream.");
-        }
-        const decoder = new TextDecoder();
         let fullContent = "";
 
-        if (reader) {
-          let buffer = "";
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
+        try {
+          fullContent = await requestChatStream(
+            apiMessages,
+            template?.id,
+            abortController.signal,
+            updateAiMessage
+          );
 
-            buffer += decoder.decode(value, { stream: true });
-            const lines = buffer.split("\n");
-            buffer = lines.pop() || "";
-
-            for (const line of lines) {
-              const trimmed = line.trim();
-              if (!trimmed || !trimmed.startsWith("data:")) continue;
-
-              const data = trimmed.slice(5).trim();
-              if (data === "[DONE]") break;
-
-              try {
-                const parsed = JSON.parse(data) as {
-                  content?: string;
-                  error?: string;
-                };
-                if (parsed.error) throw new Error(parsed.error);
-                if (parsed.content) {
-                  fullContent += parsed.content;
-                  setMessages((prev) =>
-                    prev.map((m) =>
-                      m.id === aiMessageId
-                        ? { ...m, content: fullContent }
-                        : m
-                    )
-                  );
-                }
-              } catch (e) {
-                if (e instanceof Error && e.message !== "Unexpected end of JSON input") {
-                  throw e;
-                }
-              }
-            }
+          if (!fullContent) {
+            throw new ChatRequestError(
+              "The chat response ended before any content was received."
+            );
           }
+        } catch (streamError) {
+          // Streaming (SSE) can be cut off by serverless platforms while the
+          // plain JSON response still works, so retry once without streaming
+          // when nothing was received yet and the user did not cancel.
+          const canFallback =
+            !fullContent &&
+            !abortController.signal.aborted &&
+            (streamError instanceof ChatRequestError
+              ? streamError.status === undefined || streamError.status >= 500
+              : true);
+
+          if (!canFallback) throw streamError;
+
+          fullContent = await requestChatOnce(
+            apiMessages,
+            template?.id,
+            abortController.signal
+          );
+          updateAiMessage(fullContent);
         }
 
         // Extract the refined prompt from the response if present
@@ -169,13 +293,13 @@ export function ChatInterface({ template }: ChatInterfaceProps) {
       } catch (error) {
         const errorMsg =
           error instanceof Error ? error.message : "Something went wrong";
+        const configHint = /ANTHROPIC_API_KEY|not configured/i.test(errorMsg)
+          ? "\n\nPlease check your Anthropic API key configuration and try again."
+          : "";
         setMessages((prev) =>
           prev.map((m) =>
             m.id === aiMessageId
-              ? {
-                  ...m,
-                  content: `⚠️ Error: ${errorMsg}\n\nPlease check your Anthropic API key configuration and try again.`,
-                }
+              ? { ...m, content: `⚠️ Error: ${errorMsg}${configHint}` }
               : m
           )
         );
