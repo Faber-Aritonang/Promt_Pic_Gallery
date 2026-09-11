@@ -129,6 +129,11 @@ const HF_INFERENCE_URL = "https://router.huggingface.co/hf-inference/models/";
  *
  * On success, returns raw image bytes. On error, returns JSON with error info.
  */
+// Stay below the route's `maxDuration` (60s on Vercel): if the model takes
+// longer than this, we want to answer with a readable JSON error instead of
+// being killed by the platform, which reaches the browser as an empty 500.
+const DEFAULT_TIMEOUT_MS = 45_000;
+
 export async function generateWithHuggingFace(
   prompt: string,
   modelId?: string,
@@ -173,13 +178,15 @@ export async function generateWithHuggingFace(
         "x-wait-for-model": "true",
       },
       body: JSON.stringify(body),
-      signal: AbortSignal.timeout(options?.timeoutMs ?? 90_000),
+      signal: AbortSignal.timeout(options?.timeoutMs ?? DEFAULT_TIMEOUT_MS),
     });
   } catch (error) {
     // Distinguish between timeout and network errors
-    if (error instanceof DOMException && error.name === "TimeoutError") {
+    if (error instanceof Error && error.name === "TimeoutError") {
       throw new Error(
-        "Hugging Face API request timed out. The model may be loading — try again in a few moments."
+        `Hugging Face did not answer within ${Math.round(
+          (options?.timeoutMs ?? DEFAULT_TIMEOUT_MS) / 1000
+        )}s. "${model.name}" may still be loading on the provider — press Generate again.`
       );
     }
     throw new Error(

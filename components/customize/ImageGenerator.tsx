@@ -131,9 +131,33 @@ export function ImageGenerator({
           templateId,
         }),
       });
-      const json = await res.json();
-      if (!json.success) {
-        throw new Error(json.error || "Image generation failed.");
+
+      // The body is not guaranteed to be JSON: a platform-level failure
+      // (function timeout, crash) answers with an empty body, and
+      // `response.json()` would then throw an unhelpful parse error.
+      const rawBody = await res.text();
+
+      if (!rawBody) {
+        throw new Error(
+          `Image generation failed with HTTP ${res.status}${
+            res.statusText ? ` ${res.statusText}` : ""
+          } and an empty response body. A generation that runs longer than the ` +
+            `serverless limit is cut off this way — press Generate again ` +
+            `(the model is usually warm by then).`
+        );
+      }
+
+      let json: { success?: boolean; error?: string; data?: unknown };
+      try {
+        json = JSON.parse(rawBody) as typeof json;
+      } catch {
+        throw new Error(
+          `Image generation failed with HTTP ${res.status}: ${rawBody.slice(0, 200)}`
+        );
+      }
+
+      if (!res.ok || !json.success) {
+        throw new Error(json.error || `Image generation failed with HTTP ${res.status}.`);
       }
       setResult(json.data as GenerateResult);
     } catch (err) {
