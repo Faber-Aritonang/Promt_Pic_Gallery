@@ -106,7 +106,7 @@ export default function HomePage() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <Link href="/gallery">
+                <Link href="/generate">
                   <Button variant="ghost" className="w-full gap-2">
                     {t("template.generateImage")}
                     <ArrowRight className="h-4 w-4" />

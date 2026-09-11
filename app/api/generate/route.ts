@@ -35,6 +35,8 @@ interface GenerateRequest {
   height?: number;
   templateId?: string;
   provider?: "huggingface" | "replicate";
+  /** Optional reference image URL for img2img generation. */
+  image_url?: string;
 }
 
 export async function POST(request: NextRequest): Promise<Response> {
@@ -87,6 +89,7 @@ export async function POST(request: NextRequest): Promise<Response> {
       const result = await generateWithReplicate(prompt, body.model, {
         width: body.width,
         height: body.height,
+        image_url: body.image_url,
       });
 
       // Upload to Cloudinary

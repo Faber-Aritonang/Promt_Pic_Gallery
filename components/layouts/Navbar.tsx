@@ -9,13 +9,14 @@ import { AuthButton } from "@/components/layouts/AuthButton";
 import { LanguageSwitcher } from "@/components/layouts/LanguageSwitcher";
 
 const navLinks = [
-  { href: "/", labelKey: "home" },
-  { href: "/gallery", labelKey: "gallery" },
-  { href: "/chat", labelKey: "chat" },
+  { href: "/", labelKey: "home" as const },
+  { href: "/gallery", labelKey: "gallery" as const },
+  { href: "/chat", labelKey: "chat" as const },
 ];
 
 export function Navbar() {
   const t = useTranslations("nav");
+  const tImageGen = useTranslations("imageGen");
   const pathname = usePathname();
 
   return (
@@ -41,10 +42,24 @@ export function Navbar() {
                 )}
               >
                 <Link href={link.href}>
-                  {t(link.labelKey as "gallery" | "chat")}
+                  {t(link.labelKey)}
                 </Link>
               </Button>
             ))}
+            <Button
+              variant="ghost"
+              size="sm"
+              asChild
+              className={cn(
+                "text-sm",
+                pathname === "/generate" &&
+                  "bg-accent text-accent-foreground"
+              )}
+            >
+              <Link href="/generate">
+                {tImageGen("title")}
+              </Link>
+            </Button>
           </nav>
           <div className="ml-2 border-l pl-2 flex items-center gap-2">
             <LanguageSwitcher />

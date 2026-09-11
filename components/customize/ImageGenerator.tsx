@@ -56,12 +56,15 @@ interface ImageGeneratorProps {
   prompt: string;
   templateId?: string;
   disabled?: boolean;
+  /** Optional reference image URL for img2img generation. */
+  referenceImageUrl?: string;
 }
 
 export function ImageGenerator({
   prompt,
   templateId,
   disabled,
+  referenceImageUrl,
 }: ImageGeneratorProps) {
   const [models, setModels] = useState<ImageModel[]>([]);
   const [configured, setConfigured] = useState(false);
@@ -129,6 +132,7 @@ export function ImageGenerator({
           model: selectedModelId,
           provider,
           templateId,
+          ...(referenceImageUrl ? { image_url: referenceImageUrl } : {}),
         }),
       });
 
@@ -167,7 +171,7 @@ export function ImageGenerator({
     } finally {
       setIsGenerating(false);
     }
-  }, [configured, prompt, selectedModel, models, templateId, isGenerating]);
+  }, [configured, prompt, selectedModel, models, templateId, isGenerating, referenceImageUrl]);
 
   const handleDownload = useCallback(async () => {
     if (!result) return;

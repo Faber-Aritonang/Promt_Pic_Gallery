@@ -214,13 +214,17 @@ async function createPrediction(
   apiToken: string,
   model: ReplicateModel,
   prompt: string,
-  options?: { width?: number; height?: number; timeoutMs?: number }
+  options?: { width?: number; height?: number; timeoutMs?: number; image_url?: string }
 ): Promise<Response> {
-  const input = {
+  const input: Record<string, unknown> = {
     prompt,
     width: options?.width ?? model.defaultWidth,
     height: options?.height ?? model.defaultHeight,
   };
+  // Pass reference image for img2img-capable models
+  if (options?.image_url) {
+    input.image = options.image_url;
+  }
   const timeoutMs = options?.timeoutMs ?? CREATE_TIMEOUT_MS;
 
   const viaModel = await postPrediction(
@@ -253,6 +257,8 @@ export async function generateWithReplicate(
     width?: number;
     height?: number;
     timeoutMs?: number;
+    /** Optional reference image URL for img2img generation. */
+    image_url?: string;
   }
 ): Promise<ReplicateGenerateResult> {
   if (!isReplicateConfigured()) {
@@ -270,7 +276,12 @@ export async function generateWithReplicate(
   const apiToken = process.env.REPLICATE_API_TOKEN as string;
   const startedAt = Date.now();
 
-  const createResponse = await createPrediction(apiToken, model, prompt, options);
+  const createResponse = await createPrediction(apiToken, model, prompt, {
+    width: options?.width,
+    height: options?.height,
+    timeoutMs: options?.timeoutMs,
+    image_url: options?.image_url,
+  });
 
   const prediction = (await createResponse.json()) as {
     id: string;
