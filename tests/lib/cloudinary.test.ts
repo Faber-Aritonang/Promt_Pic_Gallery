@@ -1,9 +1,17 @@
-import { describe, it, expect, vi, afterEach } from "vitest";
+import { describe, it, expect, vi, afterEach, beforeAll } from "vitest";
 import { uploadImage, getImageUrl, cloudinaryConfig } from "@/lib/cloudinary";
 
 // Mock fetch globally
 const mockFetch = vi.fn();
 vi.stubGlobal("fetch", mockFetch);
+
+// These tests must not depend on a local `.env.local`: CI has no such file and
+// `lib/cloudinary.ts` reads the env vars at call time, so fall back to test
+// values when Cloudinary is not configured.
+beforeAll(() => {
+  process.env.CLOUDINARY_CLOUD_NAME ||= "test-cloud";
+  process.env.CLOUDINARY_UPLOAD_PRESET ||= "test-preset";
+});
 
 describe("cloudinaryConfig", () => {
   it("has uploadUrl constructed from cloud name", () => {
