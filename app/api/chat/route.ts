@@ -11,9 +11,9 @@ import {
   chatCompletion,
   chatCompletionStream,
   buildRefinementMessages,
+  getModel,
   type LLMMessage,
 } from "@/lib/services/llm";
-import { getTemplateById } from "@/lib/services/templates";
 import { enforceRateLimit, RATE_LIMITS } from "@/lib/utils/rate-limit";
 import type { ApiResponse } from "@/lib/types";
 
@@ -24,6 +24,9 @@ import type { ApiResponse } from "@/lib/types";
 // response (which surfaces as "Unexpected end of JSON input" in the client).
 export const runtime = "nodejs";
 export const maxDuration = 60;
+// The GET handler below reads runtime environment state, so it must never be
+// prerendered at build time.
+export const dynamic = "force-dynamic";
 
 // ── Request types ──────────────────────────────────────────────────────────
 
@@ -31,6 +34,57 @@ interface ChatRequestBody {
   messages: { role: "user" | "assistant"; content: string }[];
   templateId?: string;
   stream?: boolean;
+}
+
+// ── GET handler: self-diagnostic ───────────────────────────────────────────
+// Open this route in a browser to see exactly what the deployed server sees.
+// `?ping=1` also makes a live call to the Anthropic API so network/egress and
+// API-key problems show up directly in the response.
+
+export async function GET(request: Request): Promise<Response> {
+  const url = new URL(request.url);
+  const apiKey = process.env.ANTHROPIC_API_KEY ?? "";
+
+  const diagnostics: Record<string, unknown> = {
+    route: "/api/chat",
+    vercelEnv: process.env.VERCEL_ENV ?? null,
+    vercelRegion: process.env.VERCEL_REGION ?? null,
+    node: process.version,
+    model: getModel(),
+    anthropicKey: {
+      present: apiKey.length > 0,
+      length: apiKey.length,
+      prefix: apiKey.slice(0, 16),
+      suffix: apiKey.slice(-4),
+    },
+    firebaseServiceAccount: Boolean(process.env.FIREBASE_SERVICE_ACCOUNT),
+  };
+
+  if (url.searchParams.has("ping")) {
+    try {
+      const startedAt = Date.now();
+      const response = await fetch("https://api.anthropic.com/v1/models", {
+        headers: {
+          "x-api-key": apiKey,
+          "anthropic-version": "2023-06-01",
+        },
+        signal: AbortSignal.timeout(15_000),
+      });
+      diagnostics.anthropic = {
+        status: response.status,
+        ms: Date.now() - startedAt,
+        body: (await response.text()).slice(0, 300),
+      };
+    } catch (error) {
+      diagnostics.anthropic = {
+        error: error instanceof Error ? `${error.name}: ${error.message}` : String(error),
+      };
+    }
+  }
+
+  return Response.json(diagnostics, {
+    headers: { "Cache-Control": "no-store" },
+  });
 }
 
 // ── POST handler ───────────────────────────────────────────────────────────
@@ -62,14 +116,23 @@ export async function POST(request: Request): Promise<Response> {
     } | undefined;
 
     if (body.templateId) {
-      const template = await getTemplateById(body.templateId);
-      if (template) {
-        templateContext = {
-          title: template.title,
-          original_prompt: template.original_prompt,
-          description: template.description,
-          style_tips: template.style_tips,
-        };
+      // Imported lazily on purpose: the templates service pulls in
+      // firebase-admin (a large server-only SDK). Keeping it out of the
+      // module-init graph means a Firestore/credential problem can only cost
+      // the template context, never the chat request itself.
+      try {
+        const { getTemplateById } = await import("@/lib/services/templates");
+        const template = await getTemplateById(body.templateId);
+        if (template) {
+          templateContext = {
+            title: template.title,
+            original_prompt: template.original_prompt,
+            description: template.description,
+            style_tips: template.style_tips,
+          };
+        }
+      } catch (error) {
+        console.warn("[/api/chat] template context unavailable:", error);
       }
     }
 

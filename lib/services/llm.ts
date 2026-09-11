@@ -33,6 +33,11 @@ export interface LLMChatResponse {
 
 // ── Configuration ──────────────────────────────────────────────────────────
 
+// Hard ceiling for the outbound call. On serverless platforms a request that
+// never gets an answer is killed by the platform, which hands the browser an
+// empty error response; failing fast here instead produces a readable message.
+const REQUEST_TIMEOUT_MS = 45_000;
+
 function getApiKey(): string {
   const key = process.env.ANTHROPIC_API_KEY;
   if (!key || key === "your_anthropic_api_key") {
@@ -78,6 +83,42 @@ For each turn, respond with:
 - Consider: subject, style, composition, lighting, mood, medium, and technical parameters
 - If the prompt is already excellent, say so and suggest fine-tuning rather than major changes`;
 
+// ── Transport ──────────────────────────────────────────────────────────────
+
+/**
+ * POST a Messages API body. Network-level failures (DNS, blocked egress,
+ * TLS, timeout) are rethrown with the underlying cause spelled out, because
+ * "fetch failed" all by itself is impossible to debug from the browser.
+ */
+async function anthropicFetch(
+  body: Record<string, unknown>,
+  apiKey: string
+): Promise<Response> {
+  try {
+    return await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    });
+  } catch (error) {
+    const name = error instanceof Error ? error.name : "";
+    const detail = error instanceof Error ? error.message : String(error);
+
+    if (name === "TimeoutError") {
+      throw new Error(
+        `Anthropic API request timed out after ${REQUEST_TIMEOUT_MS / 1000}s.`
+      );
+    }
+
+    throw new Error(`Could not reach the Anthropic API (${detail}).`);
+  }
+}
+
 // ── Non-streaming call ─────────────────────────────────────────────────────
 
 export async function chatCompletion(
@@ -104,15 +145,7 @@ export async function chatCompletion(
     body.temperature = request.temperature;
   }
 
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01",
-    },
-    body: JSON.stringify(body),
-  });
+  const response = await anthropicFetch(body, apiKey);
 
   if (!response.ok) {
     const errorText = await response.text();
@@ -162,15 +195,7 @@ export async function* chatCompletionStream(
     body.temperature = request.temperature;
   }
 
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01",
-    },
-    body: JSON.stringify(body),
-  });
+  const response = await anthropicFetch(body, apiKey);
 
   if (!response.ok) {
     const errorText = await response.text();

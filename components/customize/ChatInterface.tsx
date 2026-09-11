@@ -51,6 +51,26 @@ class ChatRequestError extends Error {
 }
 
 /**
+ * Ask the server's own diagnostics endpoint what it can see (env vars,
+ * region, Anthropic reachability). Used when a request fails with an empty
+ * body, which happens when the platform kills the function before it can
+ * answer — the diagnostics are the only way to tell "bad key" apart from
+ * "function never ran".
+ */
+async function fetchServerDiagnostics(): Promise<string> {
+  try {
+    const response = await fetch("/api/chat", { cache: "no-store" });
+    if (!response.ok) {
+      return `\n\nServer diagnostics also failed (HTTP ${response.status}).`;
+    }
+    const info = (await response.json()) as Record<string, unknown>;
+    return `\n\nServer diagnostics: ${JSON.stringify(info)}`;
+  } catch {
+    return "\n\nServer diagnostics could not be loaded.";
+  }
+}
+
+/**
  * Turn a non-OK /api/chat response into an error.
  * The body is not guaranteed to be JSON: platform-level failures (function
  * timeout, crash) come back with an empty body, so read it as text.
@@ -60,10 +80,21 @@ async function chatRequestError(response: Response): Promise<ChatRequestError> {
   const rawBody = await response.text();
 
   if (!rawBody) {
+    const platformError = response.headers.get("x-vercel-error");
+    const vercelId = response.headers.get("x-vercel-id");
+    const hints = [
+      platformError ? `x-vercel-error: ${platformError}` : null,
+      vercelId ? `x-vercel-id: ${vercelId}` : null,
+    ]
+      .filter(Boolean)
+      .join(", ");
+
+    const diagnostics = await fetchServerDiagnostics();
+
     return new ChatRequestError(
       `Request failed with HTTP ${status}${
         response.statusText ? ` ${response.statusText}` : ""
-      } (empty response body)`,
+      }${hints ? ` [${hints}]` : ""} (empty response body)${diagnostics}`,
       status
     );
   }

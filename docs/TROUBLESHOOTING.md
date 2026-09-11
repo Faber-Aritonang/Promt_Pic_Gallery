@@ -12,10 +12,13 @@ Production-only failures that do not reproduce locally, and how to diagnose them
 - On Vercel → the assistant bubble shows:
 
   ```
-  ⚠️ Error: Failed to execute 'json' on 'Response': Unexpected end of JSON input
+  ⚠️ Error: Request failed with HTTP 500 (empty response body)
   ```
 
+  (older builds showed `Failed to execute 'json' on 'Response': Unexpected end of JSON input`)
+
 - Browser DevTools → **Network** → `POST /api/chat` returns **500 (Internal Server Error)** with an **empty response body** (sometimes `504`).
+- The bubble now automatically appends `Server diagnostics: {…}` plus any `x-vercel-error` header, so the failing request explains itself.
 
 ### Why that message is misleading
 
@@ -31,6 +34,19 @@ So the message never came from Anthropic and it is **not** an API-key problem: a
 | 2 | `/api/chat` and `/api/generate` had no `maxDuration`, so a slow streamed LLM/image response could be cut off at the platform default. | Added `export const runtime = "nodejs"` and `export const maxDuration = 60` to both routes. |
 | 3 | Default model id `claude-haiku-4-5-20250501` does not exist. With `LLM_MODEL` unset on Vercel, every Anthropic call failed. | Default is now `claude-haiku-4-5` (`lib/services/llm.ts`, `.env.example`, README). |
 | 4 | An unhandled crash produced an empty 500 body, which the client could only report as an unparseable response. | The whole `/api/chat` handler (rate limiting included) now returns a JSON error body; the client reads the body as text and reports `HTTP <status>`. |
+| 5 | `/api/chat` imported `firebase-admin` at module scope (via `lib/services/templates`), so any Firestore/credential problem there took the whole chat route down. | The templates service is now imported lazily, only when a `templateId` is sent, and a failure only costs the template context. |
+| 6 | If the outbound Anthropic call never answers, the platform kills the invocation and the browser gets an empty response. | `lib/services/llm.ts` aborts the call after 45 s and reports "timed out"/"could not reach" instead. |
+
+### Self-diagnostic endpoints
+
+`GET /api/chat` reports what the deployed function sees — no dashboard needed:
+
+```json
+{ "vercelEnv": "production", "model": "claude-haiku-4-5",
+  "anthropicKey": { "present": true, "length": 108, "prefix": "sk-ant-api03-…", "suffix": "…" } }
+```
+
+`GET /api/chat?ping=1` additionally calls the Anthropic API and returns the HTTP status, latency, and error body. Compare `anthropicKey.length` with your local `.env.local` (a real key is ~108 characters); a short value means the key was truncated when it was pasted into Vercel.
 
 ### Checklist when it breaks again
 
