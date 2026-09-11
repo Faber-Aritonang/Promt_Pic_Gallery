@@ -60,6 +60,52 @@ export async function GET(request: Request): Promise<Response> {
     firebaseServiceAccount: Boolean(process.env.FIREBASE_SERVICE_ACCOUNT),
   };
 
+  if (url.searchParams.has("probe")) {
+    // Re-runs the code paths of the routes that fail on the deployed app
+    // (/api/templates, /gallery/[id]) from a function we know is alive, so the
+    // real error is visible without dashboard access.
+    const describe = (error: unknown): string =>
+      error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+
+    const probe: Record<string, string> = {};
+
+    for (const mod of ["firebase-admin/app", "firebase-admin/firestore"]) {
+      try {
+        await import(/* webpackIgnore: true */ mod);
+        probe[mod] = "loaded";
+      } catch (error) {
+        probe[mod] = describe(error);
+      }
+    }
+
+    try {
+      const { getAdminDb } = await import("@/lib/firebase-admin");
+      const startedAt = Date.now();
+      getAdminDb();
+      probe.getAdminDb = `ok in ${Date.now() - startedAt}ms`;
+    } catch (error) {
+      probe.getAdminDb = describe(error);
+    }
+
+    try {
+      const { listTemplates } = await import("@/lib/services/templates");
+      const startedAt = Date.now();
+      const result = await Promise.race([
+        listTemplates({ limit: 1 }),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("timed out after 5000ms")), 5000)
+        ),
+      ]);
+      probe.listTemplates = `ok in ${Date.now() - startedAt}ms, total=${
+        (result as { total: number }).total
+      }`;
+    } catch (error) {
+      probe.listTemplates = describe(error);
+    }
+
+    diagnostics.probe = probe;
+  }
+
   if (url.searchParams.has("ping")) {
     try {
       const startedAt = Date.now();
