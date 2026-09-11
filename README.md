@@ -66,7 +66,7 @@ Full product specification: see `PRD_Prompt_Gallery_App.md` (referenced by secti
 | 🖼️ Gallery browse (search, category filter, sort, infinite scroll) | **✅ Done** | 2 |
 | 🏗️ Template detail view (prompt, style tips, variations, copy) | **✅ Done** | 2 |
 | 💬 Anthropic Claude chat refinement with live streaming + prompt progression | **✅ Done** | 3 |
-| 📝 Template seed data (20 templates across categories) | **✅ Done** | 2 |
+| 📝 Template seed data (50 templates across categories) | **✅ Done** | 2 |
 | 🎨 Image generation — Hugging Face free models (5 models) | **✅ Done** | 4 |
 | 🎨 Image generation — Replicate paid models (FLUX.1, SDXL, Playground) | **✅ Done** | 4 |
 | 🔐 Firebase Auth — Google OAuth sign-in/out | **✅ Done** | 2 |
@@ -75,7 +75,7 @@ Full product specification: see `PRD_Prompt_Gallery_App.md` (referenced by secti
 | 💾 Chat session persistence (save conversations to Firestore) | **✅ Done** | 3 |
 | ⭐ Favorites (toggle, sync with Firestore) | **✅ Done** | 4 |
 | 📜 Generation history (track all generated images) | **✅ Done** | 4 |
-| 🧪 Unit & integration tests (96 tests, vitest) | **✅ Done** | 5 |
+| 🧪 Unit & integration tests (140 tests, vitest) | **✅ Done** | 5 |
 
 > **You are here:** Phases 1–4 are fully complete. Phase 5 (performance, security audit, production launch) is next.
 
@@ -165,7 +165,7 @@ The original spec targeted Next.js 14. This project was upgraded to **Next.js 16
 │   ├── firebase-admin.ts         # Firebase Admin SDK (guarded init, server)
 │   ├── cloudinary.ts             # Cloudinary upload & image URL helpers
 │   ├── utils.ts                  # cn() classname helper
-│   ├── data/templates.ts         # 20 seed templates (local fallback)
+│   ├── data/templates.ts         # 50 seed templates (local fallback)
 │   ├── types/index.ts            # Domain types mirroring PRD §4
 │   └── services/
 │       ├── auth.ts               # Client-side auth (Google OAuth)
@@ -316,7 +316,7 @@ Base URL: `/api` (local: `http://localhost:3000/api`). All responses follow the 
 
 ## 🔥 Firebase Setup
 
-The Firebase layer (client SDK, security rules) is **already wired into the repo** — it only needs a real project to point at. The templates API automatically falls back to the 20 local seed templates when Firestore isn't configured, so the gallery works end-to-end out of the box.
+The Firebase layer (client SDK, security rules) is **already wired into the repo** — it only needs a real project to point at. The templates API automatically falls back to the 50 local seed templates when Firestore isn't configured, so the gallery works end-to-end out of the box.
 
 ### 1. Create the project
 
@@ -399,12 +399,14 @@ npm run test:watch    # Run tests in watch mode (re-runs on file changes)
 | --- | --- | --- |
 | `tests/lib/data/templates.test.ts` | 16 | Seed data integrity, unique IDs, required fields, categories |
 | `tests/lib/services/templates.test.ts` | 24 | Search, filter, sort, pagination (page + offset), edge cases |
+| `tests/lib/services/templates-firestore.test.ts` | 2 | Firestore integration, stored vs seed templates |
 | `tests/lib/services/llm.test.ts` | 35 | getModel, chatCompletion (errors + success), streaming, buildRefinementMessages |
 | `tests/lib/services/generation.test.ts` | 17 | Model catalog, getImageModel, HF config, API calls, errors |
 | `tests/lib/cloudinary.test.ts` | 13 | Upload (Buffer/File), error handling, getImageUrl transformations |
 | `tests/api/routes.test.ts` | 25 | Health check, templates, models, auth, user-versions (GET/POST CRUD) |
 | `tests/lib/utils.test.ts` | 6 | cn() classname utility, Tailwind class merging |
-| **Total** | **121** | |
+| `tests/components/TemplateUpload.test.tsx` | 2 | Upload dialog form submission, error reporting |
+| **Total** | **140** | |
 
 ---
 
@@ -418,7 +420,7 @@ Development is executed in **phases** so progress can be reviewed and resumed ea
 | **2** | Gallery & database — 20 seed templates, browse UI, detail view, template endpoints. **Auth:** Firebase Auth (Google OAuth), user profiles, AuthButton, /profile page | ✅ **Done** (commit `8ea2462`) |
 | **3** | AI chat — Anthropic Claude integration (SSE streaming + non-streaming), chat UI, prompt progression sidebar. **User versions:** full CRUD (GET/POST/[id] GET/PUT/DELETE). **Chat sessions:** Firestore persistence | ✅ **Done** (commit `8ea2462`) |
 | **4** | Image generation — Hugging Face free models (5), Replicate paid models (FLUX.1, SDXL, Playground v2.5). **Favorites:** toggle with Firestore sync. **History:** generation history tracking. **Cloudinary** storage | ✅ **Done** (commit `8ea2462`) |
-| **5** | Testing & deployment — 121 unit/integration tests (vitest). ESLint clean (0 errors). Vercel + GitHub Actions CI/CD configured. Production-ready. | ✅ **Done** (commit `6d5e3ad`) |
+| **5** | Testing & deployment — 140 unit/integration tests (vitest). ESLint clean (0 errors). Vercel + GitHub Actions CI/CD configured. Production-ready. | ✅ **Done** (commit `6d5e3ad`) |
 
 > Process history lives in the git log — every phase, decision (e.g. the Next.js 16 upgrade) and follow-up is committed for traceability.
 
@@ -491,4 +493,4 @@ Maintained by **Faber Aritonang** — issues & feature requests via the [GitHub 
 
 ---
 
-<div align="center"><sub>PromtPicGallery · All Phases Complete · 121 Tests Passing · 0 Lint Errors · Built with the 100% free stack</sub></div>
+<div align="center"><sub>PromtPicGallery · All Phases Complete · 140 Tests Passing · 0 Lint Errors · Built with the 100% free stack</sub></div>

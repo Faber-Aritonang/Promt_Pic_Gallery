@@ -31,9 +31,13 @@ export function GalleryGrid({
 
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-      {/* Existing templates */}
-      {templates.map((template) => (
-        <TemplateCard key={template.id} template={template} />
+      {/* Existing templates — first 4 are above the fold, load eagerly */}
+      {templates.map((template, index) => (
+        <TemplateCard
+          key={template.id}
+          template={template}
+          priority={index < 4}
+        />
       ))}
 
       {/* Skeleton loading placeholders (for initial load or append) */}

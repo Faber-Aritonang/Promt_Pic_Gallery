@@ -4,41 +4,45 @@
 
 @layer base {
   :root {
-    /* PRD Section 9.1 palette — dark-first theme
-       Background: #0f172a · Surface: #1e293b · Text: #f1f5f9
-       Primary: #2563eb · Purple: #7c3aed · Orange: #f97316
-       Error: #ef4444 · Success: #10b981 */
-    --background: 222.2 47.4% 11.2%;
-    --foreground: 210 40% 96.1%;
+    /* ── Futuristic Cyberpunk Theme ───────────────────────────────────────
+       Deep space background · Neon cyan/purple accents · Glass surfaces */
+    --background: 230 25% 6%;
+    --foreground: 210 40% 96%;
 
-    --card: 217.2 32.6% 17.5%;
-    --card-foreground: 210 40% 96.1%;
+    --card: 230 25% 10%;
+    --card-foreground: 210 40% 96%;
 
-    --popover: 217.2 32.6% 14%;
-    --popover-foreground: 210 40% 96.1%;
+    --popover: 230 25% 8%;
+    --popover-foreground: 210 40% 96%;
 
-    --primary: 221.2 83.2% 53.3%;
-    --primary-foreground: 210 40% 98%;
+    --primary: 195 100% 50%;
+    --primary-foreground: 230 25% 6%;
 
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 96.1%;
+    --secondary: 230 25% 14%;
+    --secondary-foreground: 210 40% 96%;
 
-    --muted: 217.2 32.6% 20%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted: 230 20% 16%;
+    --muted-foreground: 215 15% 55%;
 
-    --accent: 217.2 32.6% 24%;
-    --accent-foreground: 210 40% 96.1%;
+    --accent: 270 80% 60%;
+    --accent-foreground: 210 40% 98%;
 
-    --destructive: 0 72.2% 50.6%;
+    --destructive: 0 72% 51%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 217.2 32.6% 24%;
-    --input: 217.2 32.6% 26%;
-    --ring: 221.2 83.2% 53.3%;
+    --border: 230 20% 18%;
+    --input: 230 20% 14%;
+    --ring: 195 100% 50%;
 
-    --success: 160.1 84.1% 39.4%;
+    --success: 160 84% 39%;
 
-    --radius: 0.625rem;
+    --radius: 0.75rem;
+
+    /* Neon glow tokens */
+    --neon-cyan: 195 100% 50%;
+    --neon-purple: 270 80% 60%;
+    --neon-pink: 330 90% 60%;
+    --neon-green: 150 90% 50%;
   }
 }
 
@@ -50,4 +54,194 @@
   body {
     @apply bg-background text-foreground antialiased;
   }
+
+  /* Scrollbar styling */
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: hsl(var(--background));
+  }
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--neon-cyan) / 0.3);
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--neon-cyan) / 0.5);
+  }
+}
+
+@layer components {
+  /* ── Glassmorphism Card ─────────────────────────────────────────────── */
+  .glass {
+    background: hsl(var(--card) / 0.6);
+    backdrop-filter: blur(16px) saturate(180%);
+    border: 1px solid hsl(var(--neon-cyan) / 0.1);
+  }
+
+  .glass-strong {
+    background: hsl(var(--card) / 0.8);
+    backdrop-filter: blur(24px) saturate(200%);
+    border: 1px solid hsl(var(--neon-cyan) / 0.15);
+  }
+
+  /* ── Neon Glow Effects ──────────────────────────────────────────────── */
+  .neon-glow {
+    box-shadow:
+      0 0 5px hsl(var(--neon-cyan) / 0.2),
+      0 0 20px hsl(var(--neon-cyan) / 0.1),
+      inset 0 0 20px hsl(var(--neon-cyan) / 0.02);
+  }
+
+  .neon-glow-purple {
+    box-shadow:
+      0 0 5px hsl(var(--neon-purple) / 0.2),
+      0 0 20px hsl(var(--neon-purple) / 0.1),
+      inset 0 0 20px hsl(var(--neon-purple) / 0.02);
+  }
+
+  .neon-border {
+    border: 1px solid hsl(var(--neon-cyan) / 0.2);
+  }
+
+  .neon-border-purple {
+    border: 1px solid hsl(var(--neon-purple) / 0.2);
+  }
+
+  /* ── 3D Card Effect ─────────────────────────────────────────────────── */
+  .card-3d {
+    transform-style: preserve-3d;
+    perspective: 1000px;
+    transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+  }
+
+  .card-3d:hover {
+    transform: translateY(-4px) rotateX(2deg);
+    box-shadow:
+      0 20px 40px hsl(var(--neon-cyan) / 0.15),
+      0 0 30px hsl(var(--neon-cyan) / 0.05);
+  }
+
+  /* ── Animated Gradient Background ───────────────────────────────────── */
+  .bg-mesh {
+    background:
+      radial-gradient(ellipse at 20% 50%, hsl(var(--neon-cyan) / 0.08) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 20%, hsl(var(--neon-purple) / 0.08) 0%, transparent 50%),
+      radial-gradient(ellipse at 50% 80%, hsl(var(--neon-pink) / 0.04) 0%, transparent 50%),
+      hsl(var(--background));
+  }
+
+  /* ── Grid Pattern ───────────────────────────────────────────────────── */
+  .grid-pattern {
+    background-image:
+      linear-gradient(hsl(var(--neon-cyan) / 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(var(--neon-cyan) / 0.03) 1px, transparent 1px);
+    background-size: 60px 60px;
+  }
+
+  /* ── Text Gradient ──────────────────────────────────────────────────── */
+  .text-gradient {
+    background: linear-gradient(135deg, hsl(var(--neon-cyan)), hsl(var(--neon-purple)));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .text-gradient-warm {
+    background: linear-gradient(135deg, hsl(var(--neon-pink)), hsl(var(--neon-purple)));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* ── Floating Animation ─────────────────────────────────────────────── */
+  .float {
+    animation: float 6s ease-in-out infinite;
+  }
+
+  .float-slow {
+    animation: float 8s ease-in-out infinite;
+  }
+
+  .float-delay {
+    animation: float 6s ease-in-out infinite 2s;
+  }
+
+  /* ── Pulse Glow ─────────────────────────────────────────────────────── */
+  .pulse-glow {
+    animation: pulse-glow 3s ease-in-out infinite;
+  }
+
+  /* ── Shimmer Effect ─────────────────────────────────────────────────── */
+  .shimmer {
+    position: relative;
+    overflow: hidden;
+  }
+  .shimmer::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      hsl(var(--neon-cyan) / 0.05),
+      transparent
+    );
+    animation: shimmer 3s infinite;
+  }
+}
+
+@layer utilities {
+  /* ── Perspective Utilities ──────────────────────────────────────────── */
+  .perspective-1000 {
+    perspective: 1000px;
+  }
+
+  .preserve-3d {
+    transform-style: preserve-3d;
+  }
+
+  .backface-hidden {
+    backface-visibility: hidden;
+  }
+}
+
+/* ── Keyframes ─────────────────────────────────────────────────────────── */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 5px hsl(var(--neon-cyan) / 0.2), 0 0 20px hsl(var(--neon-cyan) / 0.1);
+  }
+  50% {
+    box-shadow: 0 0 10px hsl(var(--neon-cyan) / 0.4), 0 0 40px hsl(var(--neon-cyan) / 0.2);
+  }
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes rotate-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }

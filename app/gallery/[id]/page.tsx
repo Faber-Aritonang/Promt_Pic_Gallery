@@ -125,6 +125,13 @@ export default async function TemplateDetailPage({
               className="object-cover"
               sizes="(max-width: 768px) 100vw, 50vw"
               priority
+              placeholder="blur"
+              blurDataURL={
+                template.original_image_url.includes("unsplash.com")
+                  ? template.original_image_url.replace("?w=800", "?w=16&h=12&fit=crop&blur=20&q=1")
+                  : "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
+              }
+              quality={80}
             />
           </div>
 
