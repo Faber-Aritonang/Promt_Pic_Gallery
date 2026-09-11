@@ -426,7 +426,9 @@ Development is executed in **phases** so progress can be reviewed and resumed ea
 
 ## 🌐 Deployment
 
-The project ships with a **GitHub Actions workflow** (`.github/workflows/deploy.yml`) that auto-deploys the `main` branch to **Vercel (free tier)** — every push runs `lint` + `typecheck`, then builds and publishes to production. Vercel is the intended host (PRD §7.1 / §12) because it runs Next.js serverless Route Handlers (`/api/*`) natively.
+Deployment runs on **Vercel (free tier)**. Importing this repository into Vercel connects its Git integration, so **every push to `main` builds and publishes to production automatically**. Vercel is the intended host (PRD §7.1 / §12) because it runs Next.js serverless Route Handlers (`/api/*`) natively.
+
+A separate **CI workflow** (`.github/workflows/ci.yml`) runs `lint`, `typecheck` and `test` on every push to `main`. It is a quality gate only — Vercel performs the deployment.
 
 ### Why not GitHub Pages?
 
@@ -434,21 +436,12 @@ This repository is the GitHub home of the project (source control, issue trackin
 
 ### Activate auto-deploy (one-time setup)
 
-1. **Create the Vercel project** — sign up at [vercel.com](https://vercel.com) and **Import Project** → this GitHub repository (or run `npx vercel link` inside the repo after logging in with `npx vercel login`).
-2. **Create an API token** — [vercel.com/account/tokens](https://vercel.com/account/tokens) → *Create Token* (e.g. `promtpicgallery-ci`).
-3. **Add GitHub secrets** — in this repo → *Settings → Secrets and variables → Actions*, create:
+1. **Create the Vercel project** — sign up at [vercel.com](https://vercel.com) and **Import Project** → this GitHub repository. Importing connects the Git integration, which then deploys every push to `main` (or link it manually with `npx vercel link` after `npx vercel login`).
+2. **Add environment variables** in the Vercel project (*Settings → Environment Variables*) — copy every key from `.env.example` for **Production *and*** Preview. ⚠️ Production secrets live in Vercel, **not** in the repository.
+3. **Push to `main`** — Vercel builds and publishes automatically; the deployment shows up on the Vercel dashboard while the CI workflow runs its checks in parallel.
+4. **Verify** — open `https://<your-app>.vercel.app/api`; it should return the health JSON (`{"status":"ok",…}`). Individual features also need their provider keys (Anthropic, Hugging Face, Cloudinary…); if an API answers 500 only in production, see [Troubleshooting](docs/TROUBLESHOOTING.md).
 
-   | Secret | Value |
-   | --- | --- |
-   | `VERCEL_TOKEN` | The API token from step 2 |
-   | `VERCEL_ORG_ID` | Your Vercel team/user ID (see `.vercel/project.json` after `vercel link`) |
-   | `VERCEL_PROJECT_ID` | The project ID (see `.vercel/project.json`) |
-
-4. **Add environment variables** in the Vercel project (*Settings → Environment Variables*) — copy every key from `.env.example`. ⚠️ Production secrets live in Vercel, **not** in the repository.
-5. **Push to `main`** — the workflow runs automatically; the production URL appears in the run log and on the Vercel dashboard.
-6. **Verify** — open `https://<your-app>.vercel.app/api`; it should return the health JSON (`{"status":"ok",…}`).
-
-You can also trigger a deploy manually from the *Actions* tab (**Run workflow**). The `vercel` CLI is pinned as a devDependency for reproducible builds.
+Prefer GitHub Actions to run the deployment itself? Add the `VERCEL_TOKEN`, `VERCEL_ORG_ID` and `VERCEL_PROJECT_ID` repository secrets (*Settings → Secrets and variables → Actions*), uncomment the `deploy` job in `.github/workflows/ci.yml`, and turn off Vercel's automatic Git deployments — otherwise every push publishes twice. The `vercel` CLI is pinned as a devDependency for reproducible builds.
 
 ### Local link workflow (alternative to dashboard import)
 

@@ -1,0 +1,94 @@
+name: CI
+
+# Quality gate for every push to main.
+#
+# Deployment is handled by Vercel's Git integration: when this repository is
+# imported into Vercel, every push to `main` builds and publishes to production
+# automatically (README → Deployment). This workflow therefore only verifies the
+# code — it must stay green, but it does not deploy.
+#
+# Want GitHub Actions to be the deployer instead? See the commented-out `deploy`
+# job at the bottom: it needs three repository secrets and Vercel's own Git
+# deployments switched off (otherwise every push publishes twice).
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  check:
+    name: Lint, typecheck & test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          # Must match the Node version used by Vercel and locally (≥ 20.9).
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        # `npm ci` needs a lockfile that satisfies every peer dependency; the
+        # package.json / package-lock.json pair is kept in sync for this.
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Optional: deploy from GitHub Actions instead of Vercel's Git integration.
+#
+# 1. Create a token at https://vercel.com/account/tokens
+# 2. Add repository secrets (Settings → Secrets and variables → Actions):
+#      VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID
+#    The two ids are in `.vercel/project.json` after running `npx vercel link`.
+# 3. Uncomment the job below.
+# 4. Disable automatic Git deployments in Vercel (Settings → Git → Ignored
+#    Build Step), otherwise every push creates two production deployments.
+#
+#  deploy:
+#    name: Deploy to Vercel (production)
+#    runs-on: ubuntu-latest
+#    needs: check
+#    timeout-minutes: 15
+#    env:
+#      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+#      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+#    steps:
+#      - name: Checkout
+#        uses: actions/checkout@v4
+#
+#      - name: Setup Node.js
+#        uses: actions/setup-node@v4
+#        with:
+#          node-version: 22
+#          cache: npm
+#
+#      - name: Install dependencies
+#        run: npm ci
+#
+#      - name: Pull Vercel environment information
+#        run: npx vercel pull --yes --environment=production
+#        env:
+#          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+#
+#      - name: Build project artifacts
+#        run: npx vercel build --prod
+#        env:
+#          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+#
+#      - name: Deploy to Vercel
+#        run: npx vercel deploy --prebuilt --prod --yes
+#        env:
+#          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
