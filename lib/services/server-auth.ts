@@ -30,7 +30,7 @@ export async function verifyAuthToken(
     const token = authHeader.slice(7);
     if (!token) return null;
 
-    const adminAuth = getAdminAuth();
+    const adminAuth = await getAdminAuth();
     const decoded = await adminAuth.verifyIdToken(token);
 
     return {

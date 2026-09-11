@@ -33,9 +33,9 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        # `npm ci` needs a lockfile that satisfies every peer dependency; the
-        # package.json / package-lock.json pair is kept in sync for this.
-        run: npm ci
+        # --legacy-peer-deps matches vercel.json's installCommand (and the
+        # package.json `overrides` entry that pins jose for jwks-rsa).
+        run: npm ci --legacy-peer-deps
 
       - name: Lint
         run: npm run lint

@@ -69,7 +69,11 @@ export async function GET(request: Request): Promise<Response> {
 
     const probe: Record<string, string> = {};
 
-    for (const mod of ["firebase-admin/app", "firebase-admin/firestore"]) {
+    for (const mod of [
+      "firebase-admin/app",
+      "firebase-admin/firestore",
+      "firebase-admin/auth",
+    ]) {
       try {
         await import(/* webpackIgnore: true */ mod);
         probe[mod] = "loaded";

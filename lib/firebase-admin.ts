@@ -10,8 +10,15 @@
 
 import { initializeApp, getApps, cert, type App } from "firebase-admin/app";
 import { getFirestore, type Firestore } from "firebase-admin/firestore";
-import { getAuth, type Auth } from "firebase-admin/auth";
 // Storage: use Cloudinary (lib/cloudinary.ts) instead of Firebase Storage.
+//
+// `firebase-admin/auth` is deliberately NOT imported here: it pulls in
+// jwks-rsa, whose CommonJS build require()s jose, an ESM-only package. On
+// runtimes that still refuse require() of an ES module (the Vercel function
+// runtime does), that import throws at module load — which 500s every route
+// that merely touches lib/firebase-admin.ts, Firestore users included. It is
+// loaded on demand in getAdminAuth() instead.
+type Auth = import("firebase-admin/auth").Auth;
 
 // ── Lazy-initialized singletons ────────────────────────────────────────────
 let app: App | null = null;
@@ -121,8 +128,15 @@ function getAdminDb(): Firestore {
   return adminDb;
 }
 
-function getAdminAuth(): Auth {
+/**
+ * Firebase Auth, loaded on demand.
+ * Kept async so that the `firebase-admin/auth` module (and its jwks-rsa/jose
+ * dependency chain) is only evaluated by the routes that actually verify
+ * tokens, never by the catalog or chat routes.
+ */
+async function getAdminAuth(): Promise<Auth> {
   if (!adminAuth) {
+    const { getAuth } = await import("firebase-admin/auth");
     adminAuth = getAuth(getAdminApp());
   }
   return adminAuth;
