@@ -123,6 +123,7 @@ export async function POST(request: NextRequest): Promise<Response> {
     // Save to Firestore
     const created_at = Date.now();
     let templateId = "";
+    let firestoreError = "";
 
     try {
       const db = getAdminDb();
@@ -146,8 +147,23 @@ export async function POST(request: NextRequest): Promise<Response> {
       });
       templateId = docRef.id;
     } catch (dbError) {
+      firestoreError =
+        dbError instanceof Error ? dbError.message : String(dbError);
       console.error("[templates] Firestore save failed:", dbError);
-      // Continue even if Firestore fails, template is still uploaded
+    }
+
+    // A template that never reaches the database cannot appear in the gallery,
+    // so reporting success here would just hide the failure.
+    if (!templateId) {
+      return Response.json(
+        {
+          success: false,
+          error:
+            "Gambar berhasil diupload, tapi template gagal disimpan ke database sehingga tidak akan muncul di galeri. " +
+            firestoreError,
+        } satisfies ApiResponse,
+        { status: 500 }
+      );
     }
 
     const body: ApiResponse = {
@@ -163,6 +179,7 @@ export async function POST(request: NextRequest): Promise<Response> {
         tags,
         style_tips: style_tips || "",
         difficulty_level: difficulty_level || "intermediate",
+        saved_to_firestore: true,
         created_at,
       },
     };

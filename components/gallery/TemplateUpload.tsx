@@ -31,6 +31,8 @@ const DIFFICULTY_OPTIONS = [
   { value: "advanced", label: "Lanjutan" },
 ] as const;
 
+const MAX_UPLOAD_BYTES = 4 * 1024 * 1024;
+
 export function TemplateUpload({
   onUploadSuccess,
   prefillPrompt,
@@ -69,13 +71,16 @@ export function TemplateUpload({
 
   // Use controlled open state if provided, otherwise use internal state
   const isDialogOpen = isOpen !== undefined ? isOpen : internalOpen;
-  const handleOpenChange = (open: boolean) => {
-    if (onOpenChange) {
-      onOpenChange(open);
-    } else {
-      setInternalOpen(open);
-    }
-  };
+  const handleOpenChange = useCallback(
+    (open: boolean) => {
+      if (onOpenChange) {
+        onOpenChange(open);
+      } else {
+        setInternalOpen(open);
+      }
+    },
+    [onOpenChange]
+  );
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<File | null>(null);
@@ -90,9 +95,16 @@ export function TemplateUpload({
       return;
     }
 
-    // Validate file size (max 10MB)
-    if (file.size > 10 * 1024 * 1024) {
-      setError("Ukuran file maksimal 10MB");
+    // Vercel rejects request bodies above ~4.5MB before the route runs, so
+    // keep our own limit below that: an oversized file would otherwise fail
+    // with an opaque platform error instead of a readable message.
+    if (file.size > MAX_UPLOAD_BYTES) {
+      setError(
+        `Ukuran file maksimal ${MAX_UPLOAD_BYTES / (1024 * 1024)}MB (gambar ini ${(
+          file.size /
+          (1024 * 1024)
+        ).toFixed(1)}MB). Kecilkan gambarnya lalu coba lagi.`
+      );
       return;
     }
 
@@ -119,10 +131,13 @@ export function TemplateUpload({
   }, [previewUrl]);
 
   const handleUpload = useCallback(async () => {
-    if (!imageInputRef.current) {
+    const file = imageInputRef.current;
+    if (!file) {
       setError("Pilih gambar terlebih dahulu");
       return;
     }
+
+    if (isUploading) return;
 
     setIsUploading(true);
     setError(null);
@@ -147,7 +162,7 @@ export function TemplateUpload({
       }
 
       const fd = new FormData();
-      fd.append("image", imageInputRef.current!);
+      fd.append("image", file);
       fd.append("title", formData.title.trim());
       fd.append("description", formData.description.trim());
       fd.append("original_prompt", formData.original_prompt.trim());
@@ -157,27 +172,38 @@ export function TemplateUpload({
       fd.append("style_tips", formData.style_tips.trim());
       fd.append("difficulty_level", formData.difficulty || "intermediate");
 
-      console.log("Uploading template with data:", {
-        title: formData.title,
-        description: formData.description,
-        original_prompt: formData.original_prompt.substring(0, 50) + "...",
-        generated_with: formData.generated_with,
-        hasImage: !!imageInputRef.current,
-      });
-
       const response = await fetch("/api/templates/upload", {
         method: "POST",
         body: fd,
       });
 
-      const json = await response.json();
-      console.log("Upload response:", json);
+      // A platform-level failure (payload too large, function cut off) answers
+      // without a JSON body, so read the text once and report the real status.
+      const rawBody = await response.text();
 
-      if (!json.success) {
+      if (!rawBody) {
+        throw new Error(
+          `Gagal mengupload template (HTTP ${response.status}${
+            response.statusText ? ` ${response.statusText}` : ""
+          }) — server tidak mengirim pesan. Kalau ukuran gambarnya besar, ` +
+            "coba perkecil dulu lalu upload lagi."
+        );
+      }
+
+      let json: { success?: boolean; error?: string; data?: { id?: string } };
+      try {
+        json = JSON.parse(rawBody) as typeof json;
+      } catch {
+        throw new Error(
+          `Gagal mengupload template (HTTP ${response.status}): ${rawBody.slice(0, 200)}`
+        );
+      }
+
+      if (!response.ok || !json.success) {
         throw new Error(json.error || `Gagal mengupload template (status: ${response.status})`);
       }
 
-      setUploadedId(json.data.id);
+      setUploadedId(json.data?.id ?? "");
       handleOpenChange(false);
       onUploadSuccess?.();
 
@@ -198,7 +224,11 @@ export function TemplateUpload({
     } finally {
       setIsUploading(false);
     }
-  }, [onUploadSuccess, handleRemoveImage]);
+    // `formData` must be a dependency: without it this callback keeps the
+    // values captured at the last re-render where `handleRemoveImage`
+    // changed (i.e. when the image was picked), so everything typed
+    // afterwards was silently posted as the stale value.
+  }, [formData, isUploading, onUploadSuccess, handleRemoveImage, handleOpenChange]);
 
   return (
     <Dialog open={isDialogOpen} onOpenChange={handleOpenChange}>

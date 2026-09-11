@@ -130,12 +130,22 @@ async function fetchFromFirestore(
     // For production, consider Algolia or Typesense for search.
     const snapshot = await col.orderBy("created_at", "desc").limit(100).get();
 
-    if (snapshot.empty) return null;
-
-    const templates: Template[] = snapshot.docs.map((doc) => ({
+    const stored: Template[] = snapshot.docs.map((doc) => ({
       id: doc.id,
       ...doc.data(),
     })) as Template[];
+
+    // Keep the seed templates listed alongside the stored ones. They are what
+    // the gallery shows before the first upload, so returning *only* Firestore
+    // documents would make the gallery appear to lose its content the moment a
+    // single template is saved. Stored documents win on id collisions.
+    const storedIds = new Set(stored.map((t) => t.id));
+    const templates = [
+      ...stored,
+      ...seedTemplates.filter((t) => !storedIds.has(t.id)),
+    ];
+
+    if (templates.length === 0) return null;
 
     return filterAndSort(templates, params);
   } catch (error) {

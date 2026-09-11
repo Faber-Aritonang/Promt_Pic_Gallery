@@ -141,3 +141,34 @@ curl -sS -o /dev/null -w '%{http_code} %{time_total}s\n' -X POST \
 ```
 
 Swap `/models/{owner}/{name}/predictions` for `/v1/predictions` with `{"version":"<hash>","input":{…}}` to test the pinned-version path. Anything other than `201` (or a hang) means that model cannot be used with the current account.
+
+---
+
+## "Save to Gallery" does not upload
+
+The upload dialog opens, but saving fails — or appears to succeed while no template ever shows up in the gallery.
+
+### Causes found and fixed
+
+| # | Cause | Fix |
+| --- | --- | --- |
+| 11 | `handleUpload` in `components/gallery/TemplateUpload.tsx` read `formData` without listing it as a `useCallback` dependency. The callback kept the values captured when the image was picked, so filling the form *after* choosing the image made it post stale (usually empty) fields — the client-side validation then rejected a form that looked complete. | `formData` is now a dependency, and `handleOpenChange` is wrapped in `useCallback` so the handler is rebuilt only when it really changes. |
+| 12 | The dialog read the response with `response.json()`, so a platform-level failure (body over the ~4.5MB Vercel limit, function cut off) surfaced as "Unexpected end of JSON input" instead of the real cause. | The response is read as text and reported with its HTTP status. The client also caps uploads at 4MB locally, below the platform limit, with a message naming the file size. |
+| 13 | The upload route swallowed Firestore write errors and still answered `success: true` with `id: ""`, so the template never appeared in the gallery and nothing said so. | A failed database write now answers `500` with the reason; the response also carries `saved_to_firestore`. |
+| 14 | `listTemplates` returned *only* Firestore documents once the collection was non-empty, so the 20 seed templates shown before the first upload disappeared the moment one template was stored. | Stored templates are merged with the seed ones (`lib/services/templates.ts`), with stored documents winning on id collisions. Covered by `tests/lib/services/templates-firestore.test.ts`. |
+
+### Checking the upload path
+
+```bash
+# Fails with 400 "Missing required fields" — proves the route is reachable
+curl -sS -X POST -F "title=t" https://<deployment>/api/templates/upload
+
+# Full upload from the command line
+curl -sS -X POST \
+  -F "image=@image.png;type=image/png" \
+  -F "title=Test" -F "description=Test" -F "original_prompt=Test" \
+  -F "original_image_generated_with=Playground v2.5" \
+  https://<deployment>/api/templates/upload
+```
+
+The response's `data.id` is the Firestore document id. `GET /api/templates` should then list it.
