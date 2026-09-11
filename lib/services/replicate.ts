@@ -6,11 +6,29 @@
 
 export interface ReplicateModel {
   id: string; // format: "owner/model-name"
+  /**
+   * Pinned model version hash used to create predictions.
+   *
+   * Predictions are created against `/v1/predictions` with an explicit
+   * `version` instead of `/v1/models/{owner}/{name}/predictions`:
+   * the model-name endpoint answers 404 "The requested resource could not be
+   * found." for models that have no default version wired up for the API
+   * (e.g. `playgroundai/playground-v2.5-1024px-aesthetic`), even though the
+   * model itself is public and the pinned version runs fine. Pinning also
+   * keeps output stable when an owner publishes a new version.
+   */
+  version: string;
   name: string;
   description: string;
   free: boolean;
   defaultWidth: number;
   defaultHeight: number;
+  /**
+   * Whether this model currently answers the Replicate API for our account
+   * (false = hidden from the UI). Models are kept in the catalog so the
+   * reason stays documented.
+   */
+  available?: boolean;
 }
 
 export interface ReplicateGenerateResult {
@@ -25,22 +43,31 @@ export interface ReplicateGenerateResult {
 export const replicateModels: ReplicateModel[] = [
   {
     id: "black-forest-labs/flux-schnell",
+    version: "c846a69991daf4c0e5d016514849d14ee5b2e6846ce6b9d6f21369e564cfe51e",
     name: "FLUX.1 Schnell",
     description: "Fast, high-quality text-to-image from Black Forest Labs.",
     free: false,
     defaultWidth: 1024,
     defaultHeight: 1024,
   },
+  // Hidden: both creation endpoints (the model path and the pinned version)
+  // hang without a response for this account — Replicate never returns an
+  // HTTP status, so the request only fails on our own timeout. Kept in the
+  // catalog as documentation; flip `available` back to true once Replicate
+  // accepts it again.
   {
     id: "black-forest-labs/flux-dev",
+    version: "6e4a938f85952bdabcc15aa329178c4d681c52bf25a0342403287dc26944661d",
     name: "FLUX.1 Dev",
     description: "Higher quality FLUX model with more detail.",
     free: false,
     defaultWidth: 1024,
     defaultHeight: 1024,
+    available: false,
   },
   {
     id: "stability-ai/sdxl",
+    version: "7762fd07cf82c948538e41f63f77d685e02b063e37e496e96eefd46c929f9bdc",
     name: "Stable Diffusion XL",
     description: "Stable Diffusion XL on Replicate.",
     free: false,
@@ -49,6 +76,7 @@ export const replicateModels: ReplicateModel[] = [
   },
   {
     id: "playgroundai/playground-v2.5-1024px-aesthetic",
+    version: "a45f82a1382bed5c7aeb861dac7c7d191b0fdf74d8d57c4a0e6ed7d4d0bf7d24",
     name: "Playground v2.5",
     description: "Aesthetic-optimized image generation.",
     free: false,
@@ -67,10 +95,153 @@ const POLL_INTERVAL_MS = 1_500;
 // Replicate intermittently answers 429/5xx while a prediction runs; do not
 // throw away a finished prediction because of a single bad poll.
 const MAX_TRANSIENT_POLL_FAILURES = 5;
+// Creating predictions is also throttled (accounts under $5 credit get
+// 6 requests/minute with a burst of 1), so retry the create call as well.
+// Keep this small: creation is retried before polling, and the whole request
+// has to fit inside the route's `maxDuration`.
+const MAX_CREATE_ATTEMPTS = 2;
+const CREATE_TIMEOUT_MS = 12_000;
 
 export function isReplicateConfigured(): boolean {
   const token = process.env.REPLICATE_API_TOKEN;
   return Boolean(token && token.length > 0 && token !== "your_replicate_api_token");
+}
+
+// ── Create a prediction ───────────────────────────────────────────────────
+
+/**
+ * POST a prediction-creation body, retrying once on transient failures.
+ * Returns the raw response (even for 4xx) so the caller can decide whether a
+ * fallback endpoint makes sense.
+ */
+async function postPrediction(
+  apiToken: string,
+  url: string,
+  body: unknown,
+  timeoutMs: number
+): Promise<Response> {
+  let lastError = "";
+
+  for (let attempt = 0; attempt < MAX_CREATE_ATTEMPTS; attempt++) {
+    let response: Response;
+    try {
+      response = await fetch(url, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(timeoutMs),
+      });
+    } catch (error) {
+      lastError =
+        error instanceof Error && error.name === "TimeoutError"
+          ? `no answer within ${Math.round(timeoutMs / 1000)}s`
+          : error instanceof Error
+            ? error.message
+            : String(error);
+      continue;
+    }
+
+    if (response.ok) return response;
+
+    // Throttling / server-side hiccups clear on their own — wait and retry.
+    if (
+      (response.status === 429 || response.status >= 500) &&
+      attempt < MAX_CREATE_ATTEMPTS - 1
+    ) {
+      const error = (await response.json().catch(() => ({}))) as {
+        retry_after?: number;
+      };
+      const waitMs = Math.min(
+        typeof error.retry_after === "number" ? error.retry_after * 1_000 : 2_000,
+        10_000
+      );
+      await new Promise((resolve) => setTimeout(resolve, waitMs));
+      continue;
+    }
+
+    return response;
+  }
+
+  throw new Error(
+    `Replicate did not accept the request (${lastError}). The model may be ` +
+      "unavailable right now — pick another model from the dropdown, or press Generate again."
+  );
+}
+
+/** Turn a non-OK create response into a readable, actionable error. */
+async function throwCreateError(
+  response: Response,
+  model: ReplicateModel
+): Promise<never> {
+  const error = (await response.json().catch(() => ({}))) as { detail?: string };
+  let message = `Replicate API error (${response.status}): ${
+    error.detail ?? "Unknown error"
+  }`;
+  if (response.status === 401) {
+    message +=
+      " — your REPLICATE_API_TOKEN was rejected. Generate a fresh token at " +
+      "https://replicate.com/account/api-tokens, update .env.local, and restart the server.";
+  } else if (response.status === 402) {
+    message +=
+      " — add credit or activate the free trial at https://replicate.com/account/billing.";
+  } else if (response.status === 404) {
+    message += ` — "${model.name}" cannot be run through the Replicate API right now. Pick another model from the dropdown.`;
+  } else if (response.status === 429) {
+    message +=
+      " — Replicate is throttling this account (rate limits are tight below $5 credit). Wait a few seconds and press Generate again.";
+  }
+  throw new Error(message);
+}
+
+/**
+ * Create a prediction for `model`.
+ *
+ * Two Replicate endpoints can create a prediction:
+ *   - POST /v1/models/{owner}/{name}/predictions  (owner's default version)
+ *   - POST /v1/predictions  { version, input }    (explicit version hash)
+ *
+ * Use the first, and fall back to the pinned version when it answers 404.
+ * Some public models (e.g. `playgroundai/playground-v2.5-1024px-aesthetic`)
+ * have no default version exposed to the API, so the model endpoint returns
+ * "The requested resource could not be found." while the pinned version runs
+ * normally. The reverse also happens: an owner's `latest_version` hash can be
+ * unrunnable while the model endpoint works, so neither route is used alone.
+ */
+async function createPrediction(
+  apiToken: string,
+  model: ReplicateModel,
+  prompt: string,
+  options?: { width?: number; height?: number; timeoutMs?: number }
+): Promise<Response> {
+  const input = {
+    prompt,
+    width: options?.width ?? model.defaultWidth,
+    height: options?.height ?? model.defaultHeight,
+  };
+  const timeoutMs = options?.timeoutMs ?? CREATE_TIMEOUT_MS;
+
+  const viaModel = await postPrediction(
+    apiToken,
+    `https://api.replicate.com/v1/models/${model.id}/predictions`,
+    { input },
+    timeoutMs
+  );
+  if (viaModel.status !== 404) {
+    if (!viaModel.ok) await throwCreateError(viaModel, model);
+    return viaModel;
+  }
+
+  const viaVersion = await postPrediction(
+    apiToken,
+    "https://api.replicate.com/v1/predictions",
+    { version: model.version, input },
+    timeoutMs
+  );
+  if (!viaVersion.ok) await throwCreateError(viaVersion, model);
+  return viaVersion;
 }
 
 // ── Generate image via Replicate ───────────────────────────────────────────
@@ -91,44 +262,15 @@ export async function generateWithReplicate(
   }
 
   const model =
-    replicateModels.find((m) => m.id === modelId) ?? replicateModels[0];
+    replicateModels.find(
+      (m) => m.id === modelId && m.available !== false
+    ) ??
+    replicateModels.find((m) => m.available !== false) ??
+    replicateModels[0];
   const apiToken = process.env.REPLICATE_API_TOKEN as string;
   const startedAt = Date.now();
 
-  // Create a prediction using the model endpoint (no version hash needed)
-  // Format: POST https://api.replicate.com/v1/models/{owner}/{name}/predictions
-  const createResponse = await fetch(
-    `https://api.replicate.com/v1/models/${model.id}/predictions`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        input: {
-          prompt,
-          width: options?.width ?? model.defaultWidth,
-          height: options?.height ?? model.defaultHeight,
-        },
-      }),
-      signal: AbortSignal.timeout(options?.timeoutMs ?? 20_000),
-    }
-  );
-
-  if (!createResponse.ok) {
-    const error = await createResponse.json().catch(() => ({}));
-    let message = `Replicate API error (${createResponse.status}): ${error.detail ?? "Unknown error"}`;
-    if (createResponse.status === 401) {
-      message +=
-        " — your REPLICATE_API_TOKEN was rejected. Generate a fresh token at " +
-        "https://replicate.com/account/api-tokens, update .env.local, and restart the server.";
-    } else if (createResponse.status === 402) {
-      message +=
-        " — add credit or activate the free trial at https://replicate.com/account/billing.";
-    }
-    throw new Error(message);
-  }
+  const createResponse = await createPrediction(apiToken, model, prompt, options);
 
   const prediction = (await createResponse.json()) as {
     id: string;
@@ -142,7 +284,9 @@ export async function generateWithReplicate(
     throw new Error("Replicate: no poll URL returned");
   }
 
-  const deadline = Date.now() + POLL_TIMEOUT_MS;
+  // Budget the *whole* call (create + fallback + polling) against
+  // POLL_TIMEOUT_MS, so a slow create cannot push us past maxDuration.
+  const deadline = startedAt + POLL_TIMEOUT_MS;
   let transientFailures = 0;
   let lastTransientError = "";
 

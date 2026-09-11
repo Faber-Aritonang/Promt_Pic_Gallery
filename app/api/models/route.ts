@@ -31,7 +31,9 @@ export async function GET(): Promise<Response> {
       free: m.free,
       defaultWidth: m.defaultWidth,
       defaultHeight: m.defaultHeight,
-      available: replicateConfigured,
+      // Respect per-model availability (models the Replicate API currently
+      // refuses to run stay hidden), combined with the provider-level config.
+      available: replicateConfigured && m.available !== false,
     })),
   ];
 

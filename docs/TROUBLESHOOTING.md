@@ -104,3 +104,40 @@ npm start           # serve the production build on http://localhost:3000
 ```
 
 A local `npm start` cannot reproduce platform-level timeouts, so always double-check the Vercel **Logs** tab for the request that failed.
+
+---
+
+## "Generate Image" fails per model (Replicate)
+
+`Replicate API error (404): The requested resource could not be found.` — Playground v2.5 returned this while the other models worked, and **locally it looked like a plain 404 from the provider** rather than anything the app did wrong.
+
+### The verified cause
+
+Two Replicate endpoints can start a prediction, and a given model may work on only one of them:
+
+| Endpoint | Picks the version via | Playground v2.5 | FLUX.1 Schnell |
+| --- | --- | --- | --- |
+| `POST /v1/models/{owner}/{name}/predictions` | owner's default version | **404** "The requested resource could not be found." | **201** (~4s) |
+| `POST /v1/predictions` `{ version, input }` | pinned version hash | **201** (~0.5s) | hangs, no response |
+
+Playground v2.5 is public and its pinned version runs normally — it simply has no default version exposed to the API, so the model-path endpoint 404s. FLUX.1 Dev is the opposite extreme: **both** endpoints accept the connection and never answer, so it only fails on our own timeout.
+
+### Fix
+
+- `lib/services/replicate.ts` tries the model endpoint first and **falls back to the pinned version when it answers 404**, so either kind of model works.
+- Prediction creation is bounded by a 12s timeout with one retry, and the polling deadline is measured from the start of the whole call (not from after creation), keeping the total inside the route's `maxDuration = 60`.
+- 429 is expected on accounts with less than $5 credit (6 requests/minute, burst of 1): the create call now retries honouring Replicate's `retry_after` instead of failing immediately.
+- Models the API refuses to run are kept in the catalog but hidden from the dropdown via `available: false` (`/api/models` and the model picker both honour it). FLUX.1 Dev is currently hidden this way.
+
+### Checking a model by hand
+
+```bash
+TOKEN=$(grep -E '^REPLICATE_API_TOKEN=' .env.local | cut -d= -f2- | tr -d '"')
+# model path (fast 201 = usable this way)
+curl -sS -o /dev/null -w '%{http_code} %{time_total}s\n' -X POST \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"input":{"prompt":"test","width":1024,"height":1024}}' \
+  https://api.replicate.com/v1/models/playgroundai/playground-v2.5-1024px-aesthetic/predictions
+```
+
+Swap `/models/{owner}/{name}/predictions` for `/v1/predictions` with `{"version":"<hash>","input":{…}}` to test the pinned-version path. Anything other than `201` (or a hang) means that model cannot be used with the current account.
