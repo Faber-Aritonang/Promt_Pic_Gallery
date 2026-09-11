@@ -2,6 +2,13 @@ import type { NextConfig } from "next";
 import createNextIntlPlugin from "next-intl/plugin";
 
 const nextConfig: NextConfig = {
+  // Exposed to the client so the running bundle can be identified from the
+  // console (`[app] build <sha>`). A tab that was left open keeps executing the
+  // JavaScript it loaded, which makes a fix look absent until a full reload.
+  env: {
+    NEXT_PUBLIC_BUILD_SHA:
+      process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ?? "local",
+  },
   // firebase-admin (and its gRPC/google-gax dependency tree) must stay outside
   // the server bundle: bundling it produces a build that loads fine locally but
   // throws at module load in the Vercel function, which surfaces as an empty
