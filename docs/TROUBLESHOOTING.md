@@ -59,14 +59,40 @@ So the message never came from Anthropic and it is **not** an API-key problem: a
 
 ## Firestore-backed routes 500 on the deployed app
 
-`/gallery/[id]`, `/chat/[templateId]`, `/api/templates`, `/api/templates/[id]` all return **500** on Vercel while `npm run dev` / `npm start` work. Same root cause as above, one layer deeper: they are the routes that import `firebase-admin`.
+`/gallery/[id]`, `/chat/[templateId]`, `/api/templates`, `/api/templates/[id]` all return **500** on Vercel while `npm run dev` / `npm start` work. Same root cause as above, one layer deeper: these are the routes that import `firebase-admin`.
+
+### The verified cause
+
+`lib/firebase-admin.ts` imported `firebase-admin/auth` at module scope. That pulls in `jwks-rsa`, whose CommonJS build `require()`s `jose` — an ES module only. The Vercel function runtime refuses `require()` of an ES module:
+
+```
+ERR_REQUIRE_ESM: require() of ES Module /var/task/node_modules/jwks-rsa/node_modules/jose/dist/webapi/index.js
+from /var/task/node_modules/jwks-rsa/src/utils.js not supported
+```
+
+So **every** route whose import graph touched that file died at import time, before its own error handling could run: an empty `500` body from a Route Handler, the Next.js error page from a page. Node 22 (and `npm start`) supports `require(esm)` by default, so the same build loads fine locally — which is exactly why this looked inexplicable.
 
 | # | Cause | Fix |
 | --- | --- | --- |
-| 7 | `firebase-admin` (with its gRPC / `google-gax` tree) was bundled into the server build. That build loads fine locally but throws at module load inside the Vercel function, so the route dies before its own error handling runs. | `serverExternalPackages: ["firebase-admin"]` in `next.config.ts`. |
-| 8 | When `FIREBASE_SERVICE_ACCOUNT` was present but rejected (e.g. a private key copied with escaped `\n`, or truncated), the code silently fell back to Application Default Credentials — which makes the function wait on an unreachable metadata server until the platform kills the request (the browser sees an empty 500). | `lib/firebase-admin.ts` now parses the key defensively (`\n` → newline) and **fails fast** with a clear message instead of falling back to ADC, so the seed-data fallbacks in `lib/services/*` keep the pages working. |
+| 7 | `firebase-admin/auth` imported at module scope (see above), so a dependency of *Auth* crashed every *Firestore* route. | `getAdminAuth()` is now `async` and does `await import("firebase-admin/auth")`, so only token verification loads it. |
+| 8 | `jwks-rsa` requires `jose@^6`, which ships no CommonJS build. | `package.json` → `overrides` pins `jose` to the CJS-compatible `^5.9.6` for `jwks-rsa`. |
+| 9 | `FIREBASE_SERVICE_ACCOUNT` present but rejected (e.g. a private key with escaped `\n`, or truncated) silently fell back to Application Default Credentials, which waits on an unreachable metadata server. | `lib/firebase-admin.ts` parses the key defensively (`\n` → newline) and **fails fast** with a clear message instead of falling back, so the seed-data fallbacks in `lib/services/*` keep the pages working. |
+| 10 | `firebase-admin`'s gRPC/`google-gax` tree bundled into the server build. | `serverExternalPackages: ["firebase-admin"]` in `next.config.ts`. |
 
-Check `POST /api/chat`'s diagnostics or the deployed logs for `[firebase-admin] FIREBASE_SERVICE_ACCOUNT is set but unusable` — that means Firestore is disabled and the app is serving seed data. Re-paste the **entire** service-account JSON (Firebase console → Project settings → Service accounts → Generate new private key) to restore Firestore.
+### Reading the real error without dashboard access
+
+When a route 500s with an empty body, ask a route that still works to run the failing code path for you:
+
+```bash
+curl "https://<deployment>/api/chat?probe=1"
+```
+
+```json
+{ "firebase-admin/auth": "loaded", "getAdminDb": "ok in 3ms",
+  "listTemplates": "ok in 411ms, total=20" }
+```
+
+Any `Error: …` string in that output is the same exception the broken route is swallowing.
 
 ### Verifying locally before redeploying
 
